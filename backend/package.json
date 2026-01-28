@@ -1,0 +1,29 @@
+{
+    "name": "vibe-saas-backend",
+    "version": "1.0.0",
+    "description": "Hono + Cloudflare D1 Backend for Vibe SaaS Starter",
+    "type": "module",
+    "scripts": {
+        "dev": "wrangler dev",
+        "deploy": "wrangler deploy",
+        "db:generate": "drizzle-kit generate:sqlite",
+        "db:migrate": "wrangler d1 migrations apply vibe-saas-db --local",
+        "db:migrate:prod": "wrangler d1 migrations apply vibe-saas-db",
+        "db:studio": "drizzle-kit studio"
+    },
+    "dependencies": {
+        "hono": "^4.0.0",
+        "drizzle-orm": "^0.30.0",
+        "bcryptjs": "^2.4.3",
+        "@hono/zod-validator": "^0.2.0",
+        "zod": "^3.22.0",
+        "jose": "^5.2.0"
+    },
+    "devDependencies": {
+        "wrangler": "^3.28.0",
+        "drizzle-kit": "^0.20.0",
+        "typescript": "^5.3.0",
+        "@types/bcryptjs": "^2.4.6",
+        "@cloudflare/workers-types": "^4.20240117.0"
+    }
+}

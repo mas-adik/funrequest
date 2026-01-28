@@ -1,0 +1,23 @@
+# Dependencies
+node_modules
+
+# Environment files
+.env
+.env.local
+.dev.vars
+
+# Build outputs
+dist
+
+# System files
+.DS_Store
+
+# Expo
+.expo
+
+# IDE
+.idea
+.vscode
+
+# Logs
+*.log
