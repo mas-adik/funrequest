@@ -6,8 +6,8 @@ on:
 
 env:
   REGISTRY: ghcr.io
-  BACKEND_IMAGE: ghcr.io/mas-adik/fundrequest-backend
-  FRONTEND_IMAGE: ghcr.io/mas-adik/fundrequest-frontend
+  BACKEND_IMAGE: ghcr.io/mas-adik/funrequest-backend
+  FRONTEND_IMAGE: ghcr.io/mas-adik/funrequest-frontend
 
 jobs:
   build-backend:

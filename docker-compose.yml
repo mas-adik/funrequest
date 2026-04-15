@@ -1,7 +1,7 @@
 services:
   # ── Backend API ────────────────────────────────────────────
   backend:
-    image: ghcr.io/mas-adik/fundrequest-backend:latest
+    image: ghcr.io/mas-adik/funrequest-backend:latest
     container_name: fundrequest-backend
     environment:
       - JWT_SECRET=${JWT_SECRET}
@@ -20,7 +20,7 @@ services:
 
   # ── Frontend (Expo Web + nginx) ────────────────────────────
   frontend:
-    image: ghcr.io/mas-adik/fundrequest-frontend:latest
+    image: ghcr.io/mas-adik/funrequest-frontend:latest
     container_name: fundrequest-frontend
     ports:
       - "3000:80"
