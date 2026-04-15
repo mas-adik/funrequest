@@ -1,56 +1,66 @@
+import 'dotenv/config';
+import { serve } from '@hono/node-server';
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
 import { logger } from 'hono/logger';
-import type { Env } from '@/types';
-import auth from '@/routes/auth';
+import auth from './routes/auth.js';
+import usersRouter from './routes/users.js';
+import fundRequestsRouter from './routes/fund-requests.js';
+import transactionsRouter from './routes/transactions.js';
+import reportsRouter from './routes/reports.js';
+import departmentsRouter from './routes/departments.js';
+import { runMigrations } from './db/migrate.js';
 
-// Initialize Hono app
-const app = new Hono<{ Bindings: Env }>();
+// ─── Run DB Migrations on startup ────────────────────────────────────────────
+runMigrations();
 
-// Global middleware
+// ─── Initialize Hono app ─────────────────────────────────────────────────────
+const app = new Hono();
+
+// ─── Global Middleware ────────────────────────────────────────────────────────
 app.use('*', logger());
 app.use(
     '*',
     cors({
-        origin: '*', // In production, restrict to mobile app domain
+        origin: '*',
         allowMethods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
         allowHeaders: ['Content-Type', 'Authorization'],
     })
 );
 
-// Health check endpoint
+// ─── Health Check ─────────────────────────────────────────────────────────────
 app.get('/', (c) => {
     return c.json({
         success: true,
-        message: 'Vibe SaaS API is running',
+        message: 'FundRequest API is running 🚀',
         version: '1.0.0',
     });
 });
 
-// Register routes
+// ─── Routes ───────────────────────────────────────────────────────────────────
 app.route('/auth', auth);
+app.route('/users', usersRouter);
+app.route('/fund-requests', fundRequestsRouter);
+app.route('/transactions', transactionsRouter);
+app.route('/reports', reportsRouter);
+app.route('/departments', departmentsRouter);
 
-// Global error handler
+// ─── Error Handlers ───────────────────────────────────────────────────────────
 app.onError((err, c) => {
     console.error('Global error:', err);
-    return c.json(
-        {
-            success: false,
-            error: 'Internal server error',
-        },
-        500
-    );
+    return c.json({ success: false, error: 'Internal server error' }, 500);
 });
 
-// 404 handler
 app.notFound((c) => {
-    return c.json(
-        {
-            success: false,
-            error: 'Route not found',
-        },
-        404
-    );
+    return c.json({ success: false, error: 'Route not found' }, 404);
 });
 
-export default app;
+// ─── Start Server ─────────────────────────────────────────────────────────────
+const port = parseInt(process.env.PORT || '8787');
+console.log(`\n🚀 FundRequest API running on http://0.0.0.0:${port}\n`);
+
+serve({
+    fetch: app.fetch,
+    port,
+    hostname: '0.0.0.0',
+});

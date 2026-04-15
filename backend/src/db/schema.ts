@@ -1,7 +1,7 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, real } from 'drizzle-orm/sqlite-core';
 import { sql } from 'drizzle-orm';
 
-// Core Table: Tenants (Organization/Workspace)
+// ─── Core Table: Tenants (Organisasi) ───────────────────────────────────────
 export const tenants = sqliteTable('tenants', {
     id: text('id').primaryKey(),
     name: text('name').notNull(),
@@ -9,13 +9,22 @@ export const tenants = sqliteTable('tenants', {
     created_at: integer('created_at', { mode: 'timestamp' })
         .notNull()
         .default(sql`(unixepoch())`),
-    last_active_at: integer('last_active_at', { mode: 'timestamp' })
-        .notNull()
-        .default(sql`(unixepoch())`),
-    subscription_plan: text('subscription_plan').notNull().default('FREE'),
 });
 
-// Users Table (Multi-role with tenant relationship)
+// ─── Departments Table ────────────────────────────────────────────────────────
+// Admin bisa tambah/edit/hapus departemen
+export const departments = sqliteTable('departments', {
+    id: integer('id').primaryKey({ autoIncrement: true }),
+    tenant_id: text('tenant_id')
+        .notNull()
+        .references(() => tenants.id, { onDelete: 'cascade' }),
+    name: text('name').notNull(),
+    created_at: integer('created_at', { mode: 'timestamp' })
+        .notNull()
+        .default(sql`(unixepoch())`),
+});
+
+// ─── Users Table ─────────────────────────────────────────────────────────────
 export const users = sqliteTable('users', {
     id: text('id').primaryKey(),
     tenant_id: text('tenant_id')
@@ -24,66 +33,58 @@ export const users = sqliteTable('users', {
     email: text('email').notNull().unique(),
     password_hash: text('password_hash').notNull(),
     full_name: text('full_name').notNull(),
-    role: text('role', { enum: ['SUPER_ADMIN', 'ADMIN', 'STAFF'] }).notNull(),
+    department: text('department'),          // Nama departemen (text, bukan FK)
+    phone: text('phone'),
+    role: text('role', { enum: ['ADMIN', 'STAFF'] }).notNull().default('STAFF'),
+    reset_token: text('reset_token'),
+    reset_token_expires: integer('reset_token_expires', { mode: 'timestamp' }),
     created_at: integer('created_at', { mode: 'timestamp' })
         .notNull()
         .default(sql`(unixepoch())`),
 });
 
-// Example Table: Staff/Team Members
-export const staff = sqliteTable('staff', {
+// ─── Fund Requests Table ──────────────────────────────────────────────────────
+// Pengajuan dana mingguan per user
+export const fundRequests = sqliteTable('fund_requests', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     tenant_id: text('tenant_id')
         .notNull()
         .references(() => tenants.id, { onDelete: 'cascade' }),
-    name: text('name').notNull(),
-    role: text('role'),
-    phone_number: text('phone_number'),
+    user_id: text('user_id')
+        .notNull()
+        .references(() => users.id, { onDelete: 'cascade' }),
+    department: text('department').notNull(),
+    full_name: text('full_name').notNull(),
+    request_date: integer('request_date', { mode: 'timestamp' }).notNull(),
+    week_start: integer('week_start', { mode: 'timestamp' }),
+    week_end: integer('week_end', { mode: 'timestamp' }),
+    description: text('description').notNull(),
+    amount: real('amount').notNull(),        // Nominal pengajuan (IDR)
+    status: text('status', { enum: ['PENDING', 'APPROVED', 'REJECTED'] })
+        .notNull()
+        .default('PENDING'),
     created_at: integer('created_at', { mode: 'timestamp' })
         .notNull()
         .default(sql`(unixepoch())`),
 });
 
-// Example Table: Events/Schedules
-export const schedules = sqliteTable('schedules', {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    tenant_id: text('tenant_id')
-        .notNull()
-        .references(() => tenants.id, { onDelete: 'cascade' }),
-    title: text('title').notNull(),
-    description: text('description'),
-    date_time: integer('date_time', { mode: 'timestamp' }).notNull(),
-    created_at: integer('created_at', { mode: 'timestamp' })
-        .notNull()
-        .default(sql`(unixepoch())`),
-});
-
-// Example Table: Transactions (Finance)
+// ─── Transactions Table ───────────────────────────────────────────────────────
+// Pemasukan & Pengeluaran terkait fund request
 export const transactions = sqliteTable('transactions', {
     id: integer('id').primaryKey({ autoIncrement: true }),
     tenant_id: text('tenant_id')
         .notNull()
         .references(() => tenants.id, { onDelete: 'cascade' }),
+    user_id: text('user_id')
+        .notNull()
+        .references(() => users.id, { onDelete: 'cascade' }),
+    fund_request_id: integer('fund_request_id')
+        .references(() => fundRequests.id, { onDelete: 'set null' }),
     type: text('type', { enum: ['IN', 'OUT'] }).notNull(),
     category: text('category').notNull(),
-    amount: integer('amount').notNull(),
     description: text('description'),
+    amount: real('amount').notNull(),
     transaction_date: integer('transaction_date', { mode: 'timestamp' }).notNull(),
-    created_at: integer('created_at', { mode: 'timestamp' })
-        .notNull()
-        .default(sql`(unixepoch())`),
-});
-
-// Example Table: Inventory
-export const inventory = sqliteTable('inventory', {
-    id: integer('id').primaryKey({ autoIncrement: true }),
-    tenant_id: text('tenant_id')
-        .notNull()
-        .references(() => tenants.id, { onDelete: 'cascade' }),
-    item_name: text('item_name').notNull(),
-    quantity: integer('quantity').notNull(),
-    condition: text('condition', { enum: ['GOOD', 'REPAIR', 'BROKEN'] }).notNull(),
-    location: text('location'),
     created_at: integer('created_at', { mode: 'timestamp' })
         .notNull()
         .default(sql`(unixepoch())`),

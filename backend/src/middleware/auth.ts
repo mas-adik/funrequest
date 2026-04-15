@@ -1,80 +1,41 @@
-import { Context, Next } from 'hono';
-import { verifyToken } from '@/lib/auth';
-import type { Env, JWTPayload } from '@/types';
+import { createMiddleware } from 'hono/factory';
+import { HTTPException } from 'hono/http-exception';
+import { jwtVerify } from 'jose';
+import type { JWTPayload } from '@/types';
 
-// Extend Hono context type to include custom variables
-type Variables = {
-    userId: string;
-    role: 'SUPER_ADMIN' | 'ADMIN' | 'STAFF';
-    tenantId: string | null;
-};
-
-/**
- * Authentication middleware that validates JWT tokens
- * Extracts user_id, role, and tenant_id from token and injects into context
- */
-export async function authMiddleware(
-    c: Context<{ Bindings: Env; Variables: Variables }>,
-    next: Next
-) {
-    try {
-        // Get Authorization header
-        const authHeader = c.req.header('Authorization');
-
-        if (!authHeader || !authHeader.startsWith('Bearer ')) {
-            return c.json(
-                {
-                    success: false,
-                    error: 'Missing or invalid Authorization header',
-                },
-                401
-            );
-        }
-
-        // Extract token
-        const token = authHeader.substring(7); // Remove 'Bearer ' prefix
-
-        // Verify and decode token with JWT secret from environment
-        const payload: JWTPayload = await verifyToken(token, c.env.JWT_SECRET);
-
-        // Inject user data into context for use in routes
-        c.set('userId', payload.user_id);
-        c.set('role', payload.role);
-        c.set('tenantId', payload.tenant_id);
-
-        // Continue to next middleware/route
-        await next();
-    } catch (error) {
-        return c.json(
-            {
-                success: false,
-                error: 'Invalid or expired token',
-            },
-            401
-        );
-    }
+function getJwtSecret(): Uint8Array {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new Error('JWT_SECRET environment variable is not set');
+    return new TextEncoder().encode(secret);
 }
 
-/**
- * Role-based authorization middleware
- * Ensures user has required role to access route
- */
-export function requireRole(
-    ...allowedRoles: Array<'SUPER_ADMIN' | 'ADMIN' | 'STAFF'>
-) {
-    return async (c: Context<{ Bindings: Env; Variables: Variables }>, next: Next) => {
-        const userRole = c.get('role') as string;
+// ─── Auth Middleware ──────────────────────────────────────────────────────────
+export const authMiddleware = createMiddleware(async (c, next) => {
+    const authHeader = c.req.header('Authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+        throw new HTTPException(401, { message: 'Authorization header required' });
+    }
 
-        if (!allowedRoles.includes(userRole as any)) {
-            return c.json(
-                {
-                    success: false,
-                    error: 'Insufficient permissions',
-                },
-                403
-            );
-        }
-
+    const token = authHeader.slice(7);
+    try {
+        const { payload } = await jwtVerify(token, getJwtSecret());
+        const jwtPayload = payload as unknown as JWTPayload;
+        c.set('userId', jwtPayload.userId);
+        c.set('role', jwtPayload.role);
+        c.set('tenantId', jwtPayload.tenantId);
         await next();
-    };
+    } catch {
+        throw new HTTPException(401, { message: 'Invalid or expired token' });
+    }
+});
+
+// ─── Role Guard ───────────────────────────────────────────────────────────────
+export function requireRole(role: 'ADMIN' | 'STAFF') {
+    return createMiddleware(async (c, next) => {
+        const userRole = c.get('role');
+        if (userRole !== role) {
+            throw new HTTPException(403, { message: 'Insufficient permissions' });
+        }
+        await next();
+    });
 }

@@ -1,29 +1,31 @@
 {
-    "name": "vibe-saas-backend",
+    "name": "fundrequest-backend",
     "version": "1.0.0",
-    "description": "Hono + Cloudflare D1 Backend for Vibe SaaS Starter",
+    "description": "FundRequest API — Hono + Node.js + SQLite",
     "type": "module",
     "scripts": {
-        "dev": "wrangler dev",
-        "deploy": "wrangler deploy",
-        "db:generate": "drizzle-kit generate:sqlite",
-        "db:migrate": "wrangler d1 migrations apply vibe-saas-db --local",
-        "db:migrate:prod": "wrangler d1 migrations apply vibe-saas-db",
-        "db:studio": "drizzle-kit studio"
+        "dev": "tsx watch src/index.ts",
+        "build": "tsc && tsc-alias",
+        "start": "node dist/index.js",
+        "db:migrate": "tsx src/db/migrate.ts"
     },
     "dependencies": {
         "hono": "^4.0.0",
+        "@hono/node-server": "^1.12.0",
         "drizzle-orm": "^0.30.0",
+        "better-sqlite3": "^11.0.0",
         "bcryptjs": "^2.4.3",
         "@hono/zod-validator": "^0.2.0",
         "zod": "^3.22.0",
-        "jose": "^5.2.0"
+        "jose": "^5.2.0",
+        "dotenv": "^16.4.0"
     },
     "devDependencies": {
-        "wrangler": "^3.28.0",
-        "drizzle-kit": "^0.20.0",
+        "tsx": "^4.7.0",
+        "tsc-alias": "^1.8.0",
         "typescript": "^5.3.0",
+        "@types/better-sqlite3": "^7.6.0",
         "@types/bcryptjs": "^2.4.6",
-        "@cloudflare/workers-types": "^4.20240117.0"
+        "@types/node": "^20.0.0"
     }
 }

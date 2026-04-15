@@ -1,0 +1,39 @@
+services:
+  # ── Backend API ────────────────────────────────────────────
+  backend:
+    image: ghcr.io/mas-adik/fundrequest-backend:latest
+    container_name: fundrequest-backend
+    environment:
+      - JWT_SECRET=${JWT_SECRET}
+      - DATABASE_PATH=/app/data/fundrequest.db
+      - PORT=8787
+    ports:
+      - "8787:8787"
+    volumes:
+      - ./data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8787/"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+
+  # ── Frontend (Expo Web + nginx) ────────────────────────────
+  frontend:
+    image: ghcr.io/mas-adik/fundrequest-frontend:latest
+    container_name: fundrequest-frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+  # ── (Opsional) Watchtower: auto-update saat ada image baru ─
+  # watchtower:
+  #   image: containrrr/watchtower
+  #   volumes:
+  #     - /var/run/docker.sock:/var/run/docker.sock
+  #   environment:
+  #     - WATCHTOWER_POLL_INTERVAL=300
+  #     - WATCHTOWER_CLEANUP=true
+  #   restart: unless-stopped

@@ -18,34 +18,25 @@ export const AuthContext = createContext<AuthContextType>({
     logout: async () => { },
 });
 
-interface AuthProviderProps {
-    children: ReactNode;
-}
-
-export function AuthProvider({ children }: AuthProviderProps) {
+export function AuthProvider({ children }: { children: ReactNode }) {
     const [isLoading, setIsLoading] = useState(true);
     const [isAuthenticated, setIsAuthenticated] = useState(false);
     const [user, setUser] = useState<User | null>(null);
 
-    // Check for existing token on mount
-    useEffect(() => {
-        checkAuthStatus();
-    }, []);
+    useEffect(() => { checkAuthStatus(); }, []);
 
     const checkAuthStatus = async () => {
         try {
-            const token = await SecureStore.getItemAsync('auth_token');
+            const token    = await SecureStore.getItemAsync('auth_token');
             const userData = await SecureStore.getItemAsync('user_data');
-
             if (token && userData) {
-                setUser(JSON.parse(userData));
+                setUser(JSON.parse(userData) as User);
                 setIsAuthenticated(true);
             } else {
                 setIsAuthenticated(false);
                 setUser(null);
             }
-        } catch (error) {
-            console.error('Error checking auth status:', error);
+        } catch {
             setIsAuthenticated(false);
             setUser(null);
         } finally {
@@ -54,38 +45,21 @@ export function AuthProvider({ children }: AuthProviderProps) {
     };
 
     const login = async (token: string, userData: User) => {
-        try {
-            await SecureStore.setItemAsync('auth_token', token);
-            await SecureStore.setItemAsync('user_data', JSON.stringify(userData));
-            setUser(userData);
-            setIsAuthenticated(true);
-        } catch (error) {
-            console.error('Error saving auth data:', error);
-            throw error;
-        }
+        await SecureStore.setItemAsync('auth_token', token);
+        await SecureStore.setItemAsync('user_data', JSON.stringify(userData));
+        setUser(userData);
+        setIsAuthenticated(true);
     };
 
     const logout = async () => {
-        try {
-            await SecureStore.deleteItemAsync('auth_token');
-            await SecureStore.deleteItemAsync('user_data');
-            setUser(null);
-            setIsAuthenticated(false);
-        } catch (error) {
-            console.error('Error logging out:', error);
-        }
+        await SecureStore.deleteItemAsync('auth_token').catch(() => { });
+        await SecureStore.deleteItemAsync('user_data').catch(() => { });
+        setUser(null);
+        setIsAuthenticated(false);
     };
 
     return (
-        <AuthContext.Provider
-            value={{
-                isLoading,
-                isAuthenticated,
-                user,
-                login,
-                logout,
-            }}
-        >
+        <AuthContext.Provider value={{ isLoading, isAuthenticated, user, login, logout }}>
             {children}
         </AuthContext.Provider>
     );

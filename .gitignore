@@ -21,3 +21,15 @@ dist
 
 # Logs
 *.log
+
+# Database
+data/
+*.db
+*.db-journal
+*.db-wal
+
+# Secrets
+Token Github.txt
+
+# Cloudflare (legacy)
+.wrangler
