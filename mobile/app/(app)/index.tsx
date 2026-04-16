@@ -72,13 +72,17 @@ export interface FRItem {
 }
 
 function statusBadge(status: string) {
-    const map: Record<string, { bg: string; text: string; label: string }> = {
-        PENDING:  { bg: 'bg-warning-100', text: 'text-warning-600', label: 'Menunggu' },
-        APPROVED: { bg: 'bg-success-100', text: 'text-success-700', label: 'Disetujui' },
-        REJECTED: { bg: 'bg-danger-100',  text: 'text-danger-600',  label: 'Ditolak' },
+    const map: Record<string, { bg: string; color: string; label: string }> = {
+        PENDING:  { bg: '#FEF3C7', color: '#92400E', label: 'Menunggu' },
+        APPROVED: { bg: '#D1FAE5', color: '#065F46', label: 'Disetujui' },
+        REJECTED: { bg: '#FEE2E2', color: '#991B1B', label: 'Ditolak' },
     };
     const s = map[status] || map.PENDING;
-    return <View className={`px-3 py-1 rounded-full ${s.bg}`}><Text className={`text-xs font-semibold ${s.text}`}>{s.label}</Text></View>;
+    return (
+        <View style={{ backgroundColor: s.bg, paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
+            <Text style={{ fontSize: 9, fontWeight: '700', color: s.color }}>{s.label}</Text>
+        </View>
+    );
 }
 
 // ─── Template PDF persis sesuai format form asli ──────────────────────────────
@@ -434,21 +438,21 @@ export default function FundRequestScreen() {
                                 <Text style={{ color: '#374151', fontSize: 13 }} numberOfLines={2}>{fr.description}</Text>
                             </TouchableOpacity>
 
-                            {/* RIGHT — Menu + Nominal + Status */}
-                            <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 120 }}>
-                                {/* ⋯ Menu */}
-                                <TouchableOpacity
-                                    hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    onPress={() => setMenuFR(fr)}
-                                >
-                                    <Text style={{ fontSize: 20, color: '#9CA3AF', fontWeight: '800' }}>⋯</Text>
-                                </TouchableOpacity>
+                            {/* RIGHT — Status+Menu row, Nominal */}
+                            <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 110 }}>
+                                {/* Status + ⋯ on same row */}
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                    {statusBadge(fr.status)}
+                                    <TouchableOpacity
+                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+                                        onPress={() => setMenuFR(fr)}
+                                    >
+                                        <Text style={{ fontSize: 20, color: '#9CA3AF', fontWeight: '800' }}>⋯</Text>
+                                    </TouchableOpacity>
+                                </View>
 
                                 {/* Nominal */}
-                                <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14, marginTop: 2 }}>{formatRupiah(fr.amount)}</Text>
-
-                                {/* Status */}
-                                {statusBadge(fr.status)}
+                                <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14, marginTop: 4 }}>{formatRupiah(fr.amount)}</Text>
                             </View>
                         </View>
                     ))
@@ -767,8 +771,8 @@ export default function FundRequestScreen() {
                             <Text style={{ fontSize: 15, color: '#374151', fontWeight: '600' }}>Cetak PDF</Text>
                         </TouchableOpacity>
 
-                        {/* Delete — PENDING */}
-                        {menuFR?.status === 'PENDING' && (
+                        {/* Delete — PENDING or APPROVED */}
+                        {(menuFR?.status === 'PENDING' || menuFR?.status === 'APPROVED') && (
                             <TouchableOpacity
                                 onPress={() => {
                                     if (!menuFR) return;
