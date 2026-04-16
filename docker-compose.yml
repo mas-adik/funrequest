@@ -23,7 +23,7 @@ services:
     image: ghcr.io/mas-adik/funrequest-frontend:latest
     container_name: fundrequest-frontend
     ports:
-      - "3000:80"
+      - "3100:80"
     depends_on:
       - backend
     restart: unless-stopped
