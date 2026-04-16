@@ -283,6 +283,11 @@ export default function FundRequestScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
+    // Menu & Approve modal state
+    const [menuFR, setMenuFR] = useState<FundRequest | null>(null);
+    const [showApprove, setShowApprove] = useState(false);
+    const [approving, setApproving] = useState(false);
+
     // Edit state
     const [showEdit, setShowEdit] = useState(false);
     const [editFR, setEditFR] = useState<FundRequest | null>(null);
@@ -434,63 +439,7 @@ export default function FundRequestScreen() {
                                 {/* ⋯ Menu */}
                                 <TouchableOpacity
                                     hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                    onPress={() => {
-                                        const actions: any[] = [];
-                                        if (fr.status === 'PENDING') {
-                                            actions.push({
-                                                text: '✅ Approve', onPress: () => {
-                                                    Alert.alert('Approve Fund Request?',
-                                                        `Setujui ${formatRupiah(fr.amount)} — saldo akan masuk ke transaksi.`,
-                                                        [
-                                                            { text: 'Batal', style: 'cancel' },
-                                                            {
-                                                                text: 'Approve', onPress: async () => {
-                                                                    try {
-                                                                        const res = await fundRequestApi.approve(fr.id);
-                                                                        if (res.success) {
-                                                                            Alert.alert('Berhasil ✅', 'Disetujui & saldo masuk.');
-                                                                            loadHistory();
-                                                                        } else {
-                                                                            Alert.alert('Gagal', res.error || 'Terjadi kesalahan');
-                                                                        }
-                                                                    } catch (e: any) {
-                                                                        Alert.alert('Gagal', e.response?.data?.error || 'Coba lagi');
-                                                                    }
-                                                                }
-                                                            },
-                                                        ]
-                                                    );
-                                                }
-                                            });
-                                            actions.push({
-                                                text: '✏️ Edit', onPress: () => {
-                                                    setEditFR(fr);
-                                                    setEditDesc(fr.description);
-                                                    setEditAmount(fr.amount);
-                                                    setEditDate(typeof fr.request_date === 'string' ? fr.request_date.split('T')[0] : todayISO());
-                                                    setShowEdit(true);
-                                                }
-                                            });
-                                        }
-                                        actions.push({ text: '🖨 Cetak PDF', onPress: () => printFundRequest(fr) });
-                                        actions.push({
-                                            text: '🗑 Hapus', style: 'destructive', onPress: () => {
-                                                Alert.alert('Hapus Fund Request?', 'Data tidak bisa dikembalikan.', [
-                                                    { text: 'Batal', style: 'cancel' },
-                                                    {
-                                                        text: 'Hapus', style: 'destructive', onPress: async () => {
-                                                            try {
-                                                                await fundRequestApi.delete(fr.id);
-                                                                loadHistory();
-                                                            } catch { Alert.alert('Gagal', 'Tidak bisa menghapus'); }
-                                                        }
-                                                    },
-                                                ]);
-                                            }
-                                        });
-                                        actions.push({ text: 'Batal', style: 'cancel' });
-                                        Alert.alert('Opsi', `FR #${fr.id}`, actions);
-                                    }}
+                                    onPress={() => setMenuFR(fr)}
                                 >
                                     <Text style={{ fontSize: 20, color: '#9CA3AF', fontWeight: '800' }}>⋯</Text>
                                 </TouchableOpacity>
@@ -746,6 +695,171 @@ export default function FundRequestScreen() {
                         Batal
                     </Button>
                 </ScrollView>
+            </Modal>
+
+            {/* ══ Bottom Sheet: Opsi Menu ══ */}
+            <Modal visible={!!menuFR} transparent animationType="fade" onRequestClose={() => setMenuFR(null)}>
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setMenuFR(null)}
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'flex-end' }}
+                >
+                    <View style={{
+                        backgroundColor: '#fff', borderTopLeftRadius: 24, borderTopRightRadius: 24,
+                        paddingHorizontal: 20, paddingTop: 16, paddingBottom: 36,
+                    }}>
+                        {/* Handle */}
+                        <View style={{ width: 40, height: 4, backgroundColor: '#E5E7EB', borderRadius: 2, alignSelf: 'center', marginBottom: 16 }} />
+
+                        {/* Title */}
+                        <Text style={{ fontSize: 16, fontWeight: '700', color: '#111827', marginBottom: 4 }}>
+                            FR #{menuFR?.id}
+                        </Text>
+                        <Text style={{ fontSize: 13, color: '#9CA3AF', marginBottom: 16 }}>
+                            {menuFR?.description}
+                        </Text>
+
+                        {/* Approve — only PENDING */}
+                        {menuFR?.status === 'PENDING' && (
+                            <TouchableOpacity
+                                onPress={() => { setShowApprove(true); }}
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+                                    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                                }}
+                            >
+                                <Text style={{ fontSize: 18, marginRight: 14 }}>✅</Text>
+                                <Text style={{ fontSize: 15, color: '#059669', fontWeight: '600' }}>Approve</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Edit — PENDING or APPROVED */}
+                        {(menuFR?.status === 'PENDING' || menuFR?.status === 'APPROVED') && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    if (!menuFR) return;
+                                    setEditFR(menuFR);
+                                    setEditDesc(menuFR.description);
+                                    setEditAmount(menuFR.amount);
+                                    setEditDate(typeof menuFR.request_date === 'string' ? menuFR.request_date.split('T')[0] : todayISO());
+                                    setMenuFR(null);
+                                    setShowEdit(true);
+                                }}
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+                                    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                                }}
+                            >
+                                <Text style={{ fontSize: 18, marginRight: 14 }}>✏️</Text>
+                                <Text style={{ fontSize: 15, color: '#374151', fontWeight: '600' }}>Edit</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Cetak PDF — always */}
+                        <TouchableOpacity
+                            onPress={() => { if (menuFR) printFundRequest(menuFR); setMenuFR(null); }}
+                            style={{
+                                flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+                                borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                            }}
+                        >
+                            <Text style={{ fontSize: 18, marginRight: 14 }}>🖨</Text>
+                            <Text style={{ fontSize: 15, color: '#374151', fontWeight: '600' }}>Cetak PDF</Text>
+                        </TouchableOpacity>
+
+                        {/* Delete — PENDING */}
+                        {menuFR?.status === 'PENDING' && (
+                            <TouchableOpacity
+                                onPress={() => {
+                                    if (!menuFR) return;
+                                    const id = menuFR.id;
+                                    Alert.alert('Hapus?', 'Data tidak bisa dikembalikan.', [
+                                        { text: 'Batal', style: 'cancel' },
+                                        {
+                                            text: 'Hapus', style: 'destructive', onPress: async () => {
+                                                try { await fundRequestApi.delete(id); loadHistory(); } catch { /* silent */ }
+                                                setMenuFR(null);
+                                            }
+                                        },
+                                    ]);
+                                }}
+                                style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}
+                            >
+                                <Text style={{ fontSize: 18, marginRight: 14 }}>🗑</Text>
+                                <Text style={{ fontSize: 15, color: '#DC2626', fontWeight: '600' }}>Hapus</Text>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Batal */}
+                        <TouchableOpacity
+                            onPress={() => setMenuFR(null)}
+                            style={{
+                                marginTop: 8, paddingVertical: 14, borderRadius: 12,
+                                backgroundColor: '#F3F4F6', alignItems: 'center',
+                            }}
+                        >
+                            <Text style={{ fontSize: 15, color: '#6B7280', fontWeight: '600' }}>Batal</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* ══ Bottom Sheet: Konfirmasi Approve ══ */}
+            <Modal visible={showApprove} transparent animationType="fade" onRequestClose={() => setShowApprove(false)}>
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setShowApprove(false)}
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
+                >
+                    <View style={{
+                        backgroundColor: '#fff', borderRadius: 20, padding: 24,
+                        width: '100%', maxWidth: 340,
+                    }}>
+                        <Text style={{ fontSize: 40, textAlign: 'center', marginBottom: 12 }}>✅</Text>
+                        <Text style={{ fontSize: 17, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 6 }}>
+                            Approve Fund Request?
+                        </Text>
+                        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
+                            Setujui {menuFR ? formatRupiah(menuFR.amount) : ''}{"\n"}Saldo akan otomatis masuk ke transaksi.
+                        </Text>
+
+                        <TouchableOpacity
+                            disabled={approving}
+                            onPress={async () => {
+                                if (!menuFR) return;
+                                setApproving(true);
+                                try {
+                                    const res = await fundRequestApi.approve(menuFR.id);
+                                    if (res.success) {
+                                        setShowApprove(false);
+                                        setMenuFR(null);
+                                        Alert.alert('Berhasil ✅', 'Disetujui & saldo masuk ke transaksi.');
+                                        loadHistory();
+                                    } else {
+                                        Alert.alert('Gagal', res.error || 'Terjadi kesalahan');
+                                    }
+                                } catch (e: any) {
+                                    Alert.alert('Gagal', e.response?.data?.error || 'Coba lagi');
+                                } finally { setApproving(false); }
+                            }}
+                            style={{
+                                backgroundColor: '#059669', borderRadius: 12, paddingVertical: 14,
+                                alignItems: 'center', marginBottom: 10, opacity: approving ? 0.6 : 1,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                {approving ? 'Memproses...' : 'Ya, Approve'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => setShowApprove(false)}
+                            style={{ paddingVertical: 12, alignItems: 'center' }}
+                        >
+                            <Text style={{ color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>Batal</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
             </Modal>
         </View>
     );
