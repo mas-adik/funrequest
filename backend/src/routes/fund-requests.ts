@@ -3,7 +3,7 @@ import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
 import { db } from '../db/connection.js';
-import { fundRequests } from '../db/schema.js';
+import { fundRequests, transactions } from '../db/schema.js';
 import { authMiddleware } from '../middleware/auth.js';
 
 const fundRequestsRouter = new Hono<{ Variables: { userId: string; role: string; tenantId: string } }>();
@@ -17,6 +17,12 @@ const createSchema = z.object({
     week_end:     z.string().optional(),
     description:  z.string().min(1),
     amount:       z.number().positive(),
+});
+
+const updateSchema = z.object({
+    description:  z.string().min(1).optional(),
+    amount:       z.number().positive().optional(),
+    request_date: z.string().optional(),
 });
 
 // POST /fund-requests
@@ -77,6 +83,96 @@ fundRequestsRouter.get('/:id', async (c) => {
     } catch (error) {
         console.error('Get fund request error:', error);
         return c.json({ success: false, error: 'Gagal mengambil fund request' }, 500);
+    }
+});
+
+// PATCH /fund-requests/:id — Update fund request (description, amount, date)
+fundRequestsRouter.patch('/:id', zValidator('json', updateSchema), async (c) => {
+    try {
+        const userId   = c.get('userId');
+        const tenantId = c.get('tenantId');
+        const id = parseInt(c.req.param('id'));
+        const data = c.req.valid('json');
+
+        // Cek ownership
+        const existing = await db.select().from(fundRequests)
+            .where(and(eq(fundRequests.id, id), eq(fundRequests.user_id, userId), eq(fundRequests.tenant_id, tenantId)))
+            .get();
+        if (!existing) return c.json({ success: false, error: 'Fund request tidak ditemukan' }, 404);
+
+        const updateData: Record<string, any> = {};
+        if (data.description)  updateData.description = data.description;
+        if (data.amount)       updateData.amount = data.amount;
+        if (data.request_date) updateData.request_date = new Date(data.request_date);
+
+        const [updated] = await db.update(fundRequests)
+            .set(updateData)
+            .where(eq(fundRequests.id, id))
+            .returning();
+
+        return c.json({ success: true, data: updated });
+    } catch (error) {
+        console.error('Update fund request error:', error);
+        return c.json({ success: false, error: 'Gagal mengupdate fund request' }, 500);
+    }
+});
+
+// POST /fund-requests/:id/approve — Approve & buat transaksi IN otomatis
+fundRequestsRouter.post('/:id/approve', async (c) => {
+    try {
+        const userId   = c.get('userId');
+        const tenantId = c.get('tenantId');
+        const id = parseInt(c.req.param('id'));
+
+        // Cek ownership & status
+        const fr = await db.select().from(fundRequests)
+            .where(and(eq(fundRequests.id, id), eq(fundRequests.user_id, userId), eq(fundRequests.tenant_id, tenantId)))
+            .get();
+        if (!fr) return c.json({ success: false, error: 'Fund request tidak ditemukan' }, 404);
+        if (fr.status === 'APPROVED') return c.json({ success: false, error: 'Sudah disetujui sebelumnya' }, 400);
+
+        // Update status → APPROVED
+        const [updated] = await db.update(fundRequests)
+            .set({ status: 'APPROVED' })
+            .where(eq(fundRequests.id, id))
+            .returning();
+
+        // Buat transaksi IN otomatis (saldo masuk ke kas)
+        await db.insert(transactions).values({
+            tenant_id:        tenantId,
+            user_id:          userId,
+            fund_request_id:  id,
+            type:             'IN',
+            category:         'Fund Request',
+            description:      `Approve FR #${id}: ${fr.description}`,
+            amount:           fr.amount,
+            transaction_date: new Date(),
+        });
+
+        return c.json({ success: true, data: updated });
+    } catch (error) {
+        console.error('Approve fund request error:', error);
+        return c.json({ success: false, error: 'Gagal approve fund request' }, 500);
+    }
+});
+
+// DELETE /fund-requests/:id
+fundRequestsRouter.delete('/:id', async (c) => {
+    try {
+        const userId   = c.get('userId');
+        const tenantId = c.get('tenantId');
+        const id = parseInt(c.req.param('id'));
+
+        const fr = await db.select().from(fundRequests)
+            .where(and(eq(fundRequests.id, id), eq(fundRequests.user_id, userId), eq(fundRequests.tenant_id, tenantId)))
+            .get();
+        if (!fr) return c.json({ success: false, error: 'Fund request tidak ditemukan' }, 404);
+
+        await db.delete(fundRequests).where(eq(fundRequests.id, id));
+        return c.json({ success: true, data: null });
+    } catch (error) {
+        console.error('Delete fund request error:', error);
+        return c.json({ success: false, error: 'Gagal menghapus fund request' }, 500);
     }
 });
 

@@ -120,6 +120,18 @@ export const fundRequestApi = {
         const res = await api.get<ApiResponse<FundRequest>>(`/fund-requests/${id}`);
         return res.data;
     },
+    update: async (id: number, data: Partial<Pick<FundRequest, 'description' | 'amount' | 'request_date'>>) => {
+        const res = await api.patch<ApiResponse<FundRequest>>(`/fund-requests/${id}`, data);
+        return res.data;
+    },
+    approve: async (id: number) => {
+        const res = await api.post<ApiResponse<FundRequest>>(`/fund-requests/${id}/approve`);
+        return res.data;
+    },
+    delete: async (id: number) => {
+        const res = await api.delete<ApiResponse<null>>(`/fund-requests/${id}`);
+        return res.data;
+    },
 };
 
 // ─── Transactions API ─────────────────────────────────────────────────────────

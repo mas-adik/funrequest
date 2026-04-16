@@ -415,17 +415,74 @@ export default function FundRequestScreen() {
                                 marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6',
                             }}
                         >
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-                                <View style={{ flex: 1, marginRight: 12 }}>
-                                    <Text style={{ fontWeight: '700', color: '#1F2937' }}>{formatRupiah(fr.amount)}</Text>
-                                    <Text style={{ color: '#9CA3AF', fontSize: 13, marginTop: 2 }} numberOfLines={2}>{fr.description}</Text>
+                            {/* Row 1: Amount + Status + Menu */}
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                                <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 15 }}>{formatRupiah(fr.amount)}</Text>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+                                    {statusBadge(fr.status)}
+                                    <TouchableOpacity
+                                        hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                                        onPress={() => {
+                                            const actions: any[] = [];
+                                            if (fr.status === 'PENDING') {
+                                                actions.push({
+                                                    text: '✅ Approve', onPress: () => {
+                                                        Alert.alert('Approve Fund Request?',
+                                                            `Setujui ${formatRupiah(fr.amount)} — saldo akan otomatis masuk ke transaksi.`,
+                                                            [
+                                                                { text: 'Batal', style: 'cancel' },
+                                                                {
+                                                                    text: 'Approve', onPress: async () => {
+                                                                        try {
+                                                                            const res = await fundRequestApi.approve(fr.id);
+                                                                            if (res.success) {
+                                                                                Alert.alert('Berhasil ✅', 'Fund request disetujui & saldo masuk ke transaksi.');
+                                                                                loadHistory();
+                                                                            } else {
+                                                                                Alert.alert('Gagal', res.error || 'Terjadi kesalahan');
+                                                                            }
+                                                                        } catch (e: any) {
+                                                                            Alert.alert('Gagal', e.response?.data?.error || 'Coba lagi');
+                                                                        }
+                                                                    }
+                                                                },
+                                                            ]
+                                                        );
+                                                    }
+                                                });
+                                            }
+                                            actions.push({
+                                                text: '🖨 Cetak PDF', onPress: () => printFundRequest(fr),
+                                            });
+                                            actions.push({
+                                                text: '🗑 Hapus', style: 'destructive', onPress: () => {
+                                                    Alert.alert('Hapus Fund Request?', 'Tindakan ini tidak bisa dibatalkan.', [
+                                                        { text: 'Batal', style: 'cancel' },
+                                                        {
+                                                            text: 'Hapus', style: 'destructive', onPress: async () => {
+                                                                try {
+                                                                    await fundRequestApi.delete(fr.id);
+                                                                    loadHistory();
+                                                                } catch { Alert.alert('Gagal', 'Tidak bisa menghapus'); }
+                                                            }
+                                                        },
+                                                    ]);
+                                                }
+                                            });
+                                            actions.push({ text: 'Batal', style: 'cancel' });
+                                            Alert.alert('Opsi', `FR #${fr.id}`, actions);
+                                        }}
+                                    >
+                                        <Text style={{ fontSize: 18, color: '#9CA3AF', fontWeight: '700', letterSpacing: 1 }}>⋯</Text>
+                                    </TouchableOpacity>
                                 </View>
-                                {statusBadge(fr.status)}
                             </View>
-                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
-                                <Text style={{ color: '#D1D5DB', fontSize: 11 }}>{fr.department}</Text>
-                                <Text style={{ color: '#D1D5DB', fontSize: 11 }}>{formatDate(fr.request_date)} • 🖨</Text>
-                            </View>
+
+                            {/* Row 2: Description */}
+                            <Text style={{ color: '#6B7280', fontSize: 13, marginBottom: 6 }} numberOfLines={2}>{fr.description}</Text>
+
+                            {/* Row 3: Date left */}
+                            <Text style={{ color: '#D1D5DB', fontSize: 11 }}>{formatDate(fr.request_date)}</Text>
                         </TouchableOpacity>
                     ))
                 )}

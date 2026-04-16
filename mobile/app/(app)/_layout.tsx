@@ -51,7 +51,7 @@ export default function AppLayout() {
                 options={{
                     title: 'Fund Request',
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon icon="📋" label="Pengajuan" focused={focused} />
+                        <TabIcon icon="📋" label="FN" focused={focused} />
                     ),
                 }}
             />
@@ -60,7 +60,7 @@ export default function AppLayout() {
                 options={{
                     title: 'Transaksi',
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon icon="💰" label="Transaksi" focused={focused} />
+                        <TabIcon icon="💰" label="IN-OUT" focused={focused} />
                     ),
                 }}
             />
@@ -69,7 +69,7 @@ export default function AppLayout() {
                 options={{
                     title: 'Laporan',
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon icon="📊" label="Laporan" focused={focused} />
+                        <TabIcon icon="📊" label="Report" focused={focused} />
                     ),
                 }}
             />
@@ -78,7 +78,7 @@ export default function AppLayout() {
                 options={{
                     title: 'Profil',
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon icon="👤" label="Profil" focused={focused} />
+                        <TabIcon icon="👤" label="Profile" focused={focused} />
                     ),
                 }}
             />
