@@ -211,7 +211,7 @@ export default function ReportScreen() {
 
                 {/* Report Preview */}
                 {report && (
-                    <>
+                    <View>
                         {/* Summary Box */}
                         <View className="bg-white rounded-2xl p-5 mb-4 shadow-sm border border-gray-100">
                             <Text className="text-gray-800 font-bold text-base mb-3">
@@ -262,7 +262,7 @@ export default function ReportScreen() {
                         <Button variant="primary" size="lg" onPress={handlePrint} className="w-full">
                             🖨 Cetak / Simpan PDF
                         </Button>
-                    </>
+                    </View>
                 )}
 
                 {!report && !loading && (

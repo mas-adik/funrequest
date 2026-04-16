@@ -30,7 +30,7 @@ function NavigationGuard() {
     if (isLoading) {
         return (
             <View className="flex-1 items-center justify-center bg-white">
-                <ActivityIndicator size="large" color="#6B8E6F" />
+                <ActivityIndicator size="large" color="#2563EB" />
             </View>
         );
     }

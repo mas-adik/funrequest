@@ -23,14 +23,19 @@ export default function RegisterScreen() {
     const [loading, setLoading] = useState(false);
     const [depts, setDepts] = useState<string[]>(DEPT_FALLBACK);
     const [errors, setErrors] = useState<Record<string, string>>({});
+    const [isFirstUser, setIsFirstUser] = useState(false);
 
-    // Coba ambil departemen dari API (mungkin gagal jika belum ada tenant)
+    // Cek apakah ini user pertama (belum ada tenant)
     useEffect(() => {
         departmentsApi.getAll().then(res => {
             if (res.success && res.data && res.data.length > 0) {
                 setDepts(res.data.map((d: Department) => d.name));
+                setIsFirstUser(false);
             }
-        }).catch(() => { /* pakai fallback */ });
+        }).catch(() => {
+            // API error = kemungkinan belum ada tenant → ini user pertama (admin)
+            setIsFirstUser(true);
+        });
     }, []);
 
     const handleRegister = async () => {
@@ -44,14 +49,45 @@ export default function RegisterScreen() {
 
         setLoading(true);
         try {
-            const response = await authApi.registerUser({ full_name: fullName, email, password, department });
+            let response;
+            if (isFirstUser) {
+                // Registrasi pertama → buat tenant + admin
+                response = await authApi.registerOwner({
+                    tenant_name: 'Perusahaan',
+                    admin_name: fullName,
+                    email,
+                    password,
+                    department,
+                });
+            } else {
+                // Registrasi biasa → join tenant yang ada
+                response = await authApi.registerUser({ full_name: fullName, email, password, department });
+            }
+
             if (response.success && response.data) {
                 await login(response.data.token, response.data.user);
             } else {
                 Alert.alert('Gagal', response.error || 'Terjadi kesalahan');
             }
         } catch (error: any) {
-            Alert.alert('Gagal', error.response?.data?.error || 'Coba lagi nanti');
+            const msg = error.response?.data?.error || 'Coba lagi nanti';
+            // Jika registerUser gagal karena belum ada tenant, coba registerOwner
+            if (msg.includes('belum diinisialisasi') || error.response?.status === 400) {
+                try {
+                    const ownerRes = await authApi.registerOwner({
+                        tenant_name: 'Perusahaan',
+                        admin_name: fullName,
+                        email,
+                        password,
+                        department,
+                    });
+                    if (ownerRes.success && ownerRes.data) {
+                        await login(ownerRes.data.token, ownerRes.data.user);
+                        return;
+                    }
+                } catch { /* fallthrough */ }
+            }
+            Alert.alert('Gagal', msg);
         } finally {
             setLoading(false);
         }
@@ -61,19 +97,29 @@ export default function RegisterScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
             <StatusBar style="dark" />
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-                <View className="flex-1 bg-surface px-6 justify-center py-10">
+                <View className="flex-1 bg-white px-6 justify-center py-10">
 
                     {/* Header */}
                     <View className="mb-8">
-                        <View className="w-16 h-16 bg-primary-600 rounded-2xl items-center justify-center mb-4">
-                            <Text style={{ fontSize: 32 }}>👤</Text>
-                        </View>
                         <Text className="text-3xl font-bold text-gray-900 mb-1">Buat Akun</Text>
-                        <Text className="text-gray-500 text-base">Daftar untuk mulai menggunakan FundRequest</Text>
+                        <Text className="text-gray-500 text-base">
+                            {isFirstUser
+                                ? 'Akun pertama akan menjadi Administrator'
+                                : 'Daftar untuk mulai menggunakan FundRequest'}
+                        </Text>
                     </View>
 
-                    {/* Form Card */}
-                    <View className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                    {/* First user badge */}
+                    {isFirstUser && (
+                        <View style={{ backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A', borderRadius: 12, padding: 12, marginBottom: 16 }}>
+                            <Text style={{ color: '#92400E', fontSize: 13, fontWeight: '600' }}>
+                                👑 Anda akan menjadi Admin pertama
+                            </Text>
+                        </View>
+                    )}
+
+                    {/* Form */}
+                    <View>
                         <Input
                             label="Nama Lengkap"
                             placeholder="Masukkan nama lengkap"
@@ -99,36 +145,42 @@ export default function RegisterScreen() {
                             error={errors.password}
                             rightElement={
                                 <TouchableOpacity onPress={() => setShowPass(!showPass)}>
-                                    <Text className="text-primary-600 text-sm">{showPass ? 'Sembunyikan' : 'Tampilkan'}</Text>
+                                    <Text style={{ color: '#2563EB', fontSize: 13 }}>{showPass ? 'Sembunyikan' : 'Tampilkan'}</Text>
                                 </TouchableOpacity>
                             }
                         />
 
                         {/* Pilih Departemen */}
-                        <View className="mb-4">
-                            <Text className="text-gray-700 font-semibold text-sm mb-1.5">Departemen</Text>
-                            <View className="flex-row flex-wrap gap-2">
+                        <View style={{ marginBottom: 16 }}>
+                            <Text style={{ color: '#374151', fontWeight: '600', fontSize: 13, marginBottom: 6 }}>Departemen</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                                 {depts.map(dept => (
                                     <TouchableOpacity
                                         key={dept}
                                         onPress={() => setDepartment(dept)}
-                                        className={`px-4 py-2 rounded-xl border ${department === dept
-                                            ? 'bg-primary-600 border-primary-600'
-                                            : 'bg-white border-gray-200'}`}
+                                        style={{
+                                            paddingHorizontal: 16, paddingVertical: 8, borderRadius: 10,
+                                            borderWidth: 1.5,
+                                            backgroundColor: department === dept ? '#2563EB' : '#fff',
+                                            borderColor: department === dept ? '#2563EB' : '#E5E7EB',
+                                        }}
                                     >
-                                        <Text className={`text-sm font-semibold ${department === dept ? 'text-white' : 'text-gray-600'}`}>
+                                        <Text style={{
+                                            fontSize: 13, fontWeight: '600',
+                                            color: department === dept ? '#fff' : '#6B7280',
+                                        }}>
                                             {dept}
                                         </Text>
                                     </TouchableOpacity>
                                 ))}
                             </View>
                             {errors.department && (
-                                <Text className="text-danger-600 text-xs mt-1 ml-1">{errors.department}</Text>
+                                <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{errors.department}</Text>
                             )}
                         </View>
 
                         <Button variant="primary" size="lg" onPress={handleRegister} loading={loading} className="w-full mt-2">
-                            Daftar Sekarang
+                            {isFirstUser ? 'Buat Akun Admin' : 'Daftar Sekarang'}
                         </Button>
                     </View>
 

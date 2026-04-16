@@ -44,19 +44,20 @@ export default function LoginScreen() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
             <StatusBar style="dark" />
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-                <View className="flex-1 bg-surface px-6 justify-center py-10">
+                <View className="flex-1 bg-white px-6 justify-center py-10">
 
                     {/* Header */}
                     <View className="mb-10">
-                        <View className="w-16 h-16 bg-primary-600 rounded-2xl items-center justify-center mb-4">
-                            <Text style={{ fontSize: 32 }}>💼</Text>
-                        </View>
-                        <Text className="text-3xl font-bold text-gray-900 mb-1">Selamat Datang</Text>
-                        <Text className="text-gray-500 text-base">Masuk ke akun FundRequest Anda</Text>
+                        <Text style={{ fontSize: 36, fontWeight: '800', color: '#111827', marginBottom: 4 }}>
+                            FundRequest
+                        </Text>
+                        <Text style={{ color: '#6B7280', fontSize: 15 }}>
+                            Masuk ke akun Anda
+                        </Text>
                     </View>
 
-                    {/* Card Form */}
-                    <View className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                    {/* Form */}
+                    <View>
                         <Input
                             label="Email"
                             placeholder="nama@perusahaan.com"
@@ -75,19 +76,12 @@ export default function LoginScreen() {
                             error={errors.password}
                             rightElement={
                                 <TouchableOpacity onPress={() => setShowPass(!showPass)}>
-                                    <Text className="text-primary-600 text-sm">{showPass ? 'Sembunyikan' : 'Tampilkan'}</Text>
+                                    <Text style={{ color: '#2563EB', fontSize: 13 }}>{showPass ? 'Sembunyikan' : 'Tampilkan'}</Text>
                                 </TouchableOpacity>
                             }
                         />
 
-                        {/* Lupa Password */}
-                        <TouchableOpacity className="self-end mb-4 -mt-2">
-                            <Link href="/(auth)/forgot-password">
-                                <Text className="text-primary-600 text-sm font-semibold">Lupa Password?</Text>
-                            </Link>
-                        </TouchableOpacity>
-
-                        <Button variant="primary" size="lg" onPress={handleLogin} loading={loading} className="w-full">
+                        <Button variant="primary" size="lg" onPress={handleLogin} loading={loading} className="w-full mt-2">
                             Masuk
                         </Button>
                     </View>

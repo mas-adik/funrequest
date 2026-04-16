@@ -87,10 +87,10 @@ export default function ForgotPasswordScreen() {
                         </Text>
                     </View>
 
-                    {/* Form Card */}
-                    <View className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100">
+                    {/* Form */}
+                    <View>
                         {step === 1 ? (
-                            <>
+                            <View>
                                 <Input
                                     label="Email Terdaftar"
                                     placeholder="nama@perusahaan.com"
@@ -103,9 +103,9 @@ export default function ForgotPasswordScreen() {
                                 <Button variant="primary" size="lg" onPress={handleSendOTP} loading={loading} className="w-full mt-2">
                                     Kirim Kode OTP
                                 </Button>
-                            </>
+                            </View>
                         ) : (
-                            <>
+                            <View>
                                 <Input
                                     label="Kode OTP (6 digit)"
                                     placeholder="123456"
@@ -137,7 +137,7 @@ export default function ForgotPasswordScreen() {
                                 <Button variant="ghost" size="md" onPress={() => setStep(1)} className="w-full mt-2">
                                     ← Kirim Ulang OTP
                                 </Button>
-                            </>
+                            </View>
                         )}
                     </View>
 
