@@ -10,7 +10,7 @@ services:
     ports:
       - "8787:8787"
     volumes:
-      - ./data:/app/data
+      - fundrequest-data:/app/data
     restart: unless-stopped
     healthcheck:
       test: ["CMD", "wget", "-q", "--spider", "http://localhost:8787/"]
@@ -37,3 +37,8 @@ services:
   #     - WATCHTOWER_POLL_INTERVAL=300
   #     - WATCHTOWER_CLEANUP=true
   #   restart: unless-stopped
+
+# ── Named volume: Docker auto-create, aman di Synology NAS ──
+volumes:
+  fundrequest-data:
+    driver: local
