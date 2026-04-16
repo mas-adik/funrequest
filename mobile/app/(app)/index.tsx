@@ -334,7 +334,12 @@ export default function FundRequestScreen() {
         setLoadingHistory(true);
         try {
             const res = await fundRequestApi.getAll();
-            if (res.success && res.data) setHistory(res.data);
+            if (res.success && res.data) {
+                const sorted = [...res.data].sort((a, b) =>
+                    new Date(b.request_date).getTime() - new Date(a.request_date).getTime()
+                );
+                setHistory(sorted);
+            }
         } catch {/* silent */} finally { setLoadingHistory(false); }
     }, []);
 
