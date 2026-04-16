@@ -1,15 +1,12 @@
-# ── Single stage: langsung run dengan tsx ──────────────────
+# ── Build & Run ────────────────────────────────────────────
 FROM node:20-alpine
 WORKDIR /app
 
-# better-sqlite3 perlu build tools untuk native compilation
-RUN apk add --no-cache python3 make g++
+# better-sqlite3 butuh build tools untuk native addon
+RUN apk add --no-cache python3 make g++ gcc musl-dev
 
 COPY package*.json ./
 RUN npm install
-
-# Cleanup build tools setelah native modules compiled
-RUN apk del python3 make g++
 
 COPY tsconfig.json ./
 COPY src/ ./src/
@@ -23,5 +20,4 @@ ENV DATABASE_PATH=/app/data/fundrequest.db
 
 EXPOSE 8787
 
-# Jalankan langsung dengan tsx (no tsc build needed)
 CMD ["npx", "tsx", "src/index.ts"]
