@@ -292,6 +292,17 @@ export default function FundRequestScreen() {
     const [showApprove, setShowApprove] = useState(false);
     const [approving, setApproving] = useState(false);
 
+    // Toast notification
+    const [toast, setToast] = useState<{ icon: string; title: string; message: string } | null>(null);
+    const showToast = (icon: string, title: string, message: string) => {
+        setToast({ icon, title, message });
+        setTimeout(() => setToast(null), 2500);
+    };
+
+    // Delete confirmation
+    const [deleteFR, setDeleteFR] = useState<FundRequest | null>(null);
+    const [deleting, setDeleting] = useState(false);
+
     // Edit state
     const [showEdit, setShowEdit] = useState(false);
     const [editFR, setEditFR] = useState<FundRequest | null>(null);
@@ -395,28 +406,29 @@ export default function FundRequestScreen() {
     };
 
     return (
-        <View className="flex-1 bg-surface">
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
             <StatusBar style="light" />
 
-            <ScrollView
-                className="flex-1"
-                contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
-                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
-            >
-                {/* Info Banner */}
-                <View style={{ backgroundColor: '#1D4ED8', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+            {/* Fixed Banner */}
+            <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
+                <View style={{ backgroundColor: '#1D4ED8', borderRadius: 16, padding: 20, marginBottom: 12 }}>
                     <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', opacity: 0.8, marginBottom: 2 }}>Selamat datang,</Text>
                     <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800' }}>{user?.full_name}</Text>
                     <Text style={{ color: '#fff', opacity: 0.8, fontSize: 13, marginTop: 2 }}>
                         {user?.department} • {user?.role === 'ADMIN' ? '👑 Admin' : 'Staff'}
                     </Text>
                 </View>
+                <Text style={{ color: '#374151', fontWeight: '700', fontSize: 15, marginBottom: 8 }}>Riwayat Pengajuan</Text>
+            </View>
 
-                {/* Riwayat Pengajuan */}
-                <Text style={{ color: '#374151', fontWeight: '700', fontSize: 15, marginBottom: 12 }}>Riwayat Pengajuan</Text>
-
+            {/* Scrollable Cards Only */}
+            <ScrollView
+                style={{ flex: 1 }}
+                contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
+                refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
+            >
                 {loadingHistory ? (
-                    <ActivityIndicator color="#2563EB" />
+                    <ActivityIndicator color="#2563EB" style={{ marginTop: 32 }} />
                 ) : history.length === 0 ? (
                     <View style={{ alignItems: 'center', paddingVertical: 48 }}>
                         <Text style={{ fontSize: 48 }}>📋</Text>
@@ -433,14 +445,13 @@ export default function FundRequestScreen() {
                             }}
                         >
                             {/* LEFT — Date + Deskripsi */}
-                            <TouchableOpacity style={{ flex: 1, marginRight: 12 }} onPress={() => printFundRequest(fr)}>
+                            <View style={{ flex: 1, marginRight: 12 }}>
                                 <Text style={{ color: '#9CA3AF', fontSize: 11, marginBottom: 3 }}>{formatDate(fr.request_date)}</Text>
                                 <Text style={{ color: '#374151', fontSize: 13 }} numberOfLines={2}>{fr.description}</Text>
-                            </TouchableOpacity>
+                            </View>
 
                             {/* RIGHT — Status+Menu row, Nominal */}
                             <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 110 }}>
-                                {/* Status + ⋯ on same row */}
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                     {statusBadge(fr.status)}
                                     <TouchableOpacity
@@ -450,8 +461,6 @@ export default function FundRequestScreen() {
                                         <Text style={{ fontSize: 20, color: '#9CA3AF', fontWeight: '800' }}>⋯</Text>
                                     </TouchableOpacity>
                                 </View>
-
-                                {/* Nominal */}
                                 <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14, marginTop: 4 }}>{formatRupiah(fr.amount)}</Text>
                             </View>
                         </View>
@@ -681,14 +690,14 @@ export default function FundRequestScreen() {
                                     request_date: editDate,
                                 });
                                 if (res.success) {
-                                    Alert.alert('Berhasil', 'Fund request diperbarui');
                                     setShowEdit(false);
                                     loadHistory();
+                                    showToast('✅', 'Berhasil', 'Fund request diperbarui');
                                 } else {
-                                    Alert.alert('Gagal', res.error || 'Terjadi kesalahan');
+                                    showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan');
                                 }
                             } catch (e: any) {
-                                Alert.alert('Gagal', e.response?.data?.error || 'Coba lagi');
+                                showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi');
                             } finally { setEditSaving(false); }
                         }}
                         className="w-full mt-2"
@@ -776,16 +785,8 @@ export default function FundRequestScreen() {
                             <TouchableOpacity
                                 onPress={() => {
                                     if (!menuFR) return;
-                                    const id = menuFR.id;
-                                    Alert.alert('Hapus?', 'Data tidak bisa dikembalikan.', [
-                                        { text: 'Batal', style: 'cancel' },
-                                        {
-                                            text: 'Hapus', style: 'destructive', onPress: async () => {
-                                                try { await fundRequestApi.delete(id); loadHistory(); } catch { /* silent */ }
-                                                setMenuFR(null);
-                                            }
-                                        },
-                                    ]);
+                                    setDeleteFR(menuFR);
+                                    setMenuFR(null);
                                 }}
                                 style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 14 }}
                             >
@@ -837,13 +838,13 @@ export default function FundRequestScreen() {
                                     if (res.success) {
                                         setShowApprove(false);
                                         setMenuFR(null);
-                                        Alert.alert('Berhasil ✅', 'Disetujui & saldo masuk ke transaksi.');
                                         loadHistory();
+                                        showToast('✅', 'Berhasil', 'Disetujui & saldo masuk ke transaksi');
                                     } else {
-                                        Alert.alert('Gagal', res.error || 'Terjadi kesalahan');
+                                        showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan');
                                     }
                                 } catch (e: any) {
-                                    Alert.alert('Gagal', e.response?.data?.error || 'Coba lagi');
+                                    showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi');
                                 } finally { setApproving(false); }
                             }}
                             style={{
@@ -864,6 +865,75 @@ export default function FundRequestScreen() {
                         </TouchableOpacity>
                     </View>
                 </TouchableOpacity>
+            </Modal>
+
+            {/* ══ Delete Confirmation Modal ══ */}
+            <Modal visible={!!deleteFR} transparent animationType="fade" onRequestClose={() => setDeleteFR(null)}>
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setDeleteFR(null)}
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
+                >
+                    <View style={{
+                        backgroundColor: '#fff', borderRadius: 20, padding: 24,
+                        width: '100%', maxWidth: 320,
+                    }}>
+                        <Text style={{ fontSize: 40, textAlign: 'center', marginBottom: 12 }}>🗑</Text>
+                        <Text style={{ fontSize: 17, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 6 }}>
+                            Hapus Fund Request?
+                        </Text>
+                        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
+                            Data yang sudah dihapus tidak bisa dikembalikan.
+                        </Text>
+
+                        <TouchableOpacity
+                            disabled={deleting}
+                            onPress={async () => {
+                                if (!deleteFR) return;
+                                setDeleting(true);
+                                try {
+                                    await fundRequestApi.delete(deleteFR.id);
+                                    setDeleteFR(null);
+                                    loadHistory();
+                                    showToast('✅', 'Dihapus', 'Fund request berhasil dihapus');
+                                } catch {
+                                    showToast('❌', 'Gagal', 'Tidak bisa menghapus');
+                                } finally { setDeleting(false); }
+                            }}
+                            style={{
+                                backgroundColor: '#DC2626', borderRadius: 12, paddingVertical: 14,
+                                alignItems: 'center', marginBottom: 10, opacity: deleting ? 0.6 : 1,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                {deleting ? 'Menghapus...' : 'Ya, Hapus'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => setDeleteFR(null)}
+                            style={{ paddingVertical: 12, alignItems: 'center' }}
+                        >
+                            <Text style={{ color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>Batal</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* ══ Toast Notification ══ */}
+            <Modal visible={!!toast} transparent animationType="fade">
+                <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 24 }}>
+                    <View style={{
+                        backgroundColor: '#fff', borderRadius: 20, padding: 28,
+                        width: '100%', maxWidth: 280, alignItems: 'center',
+                        elevation: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 },
+                        shadowOpacity: 0.15, shadowRadius: 20,
+                    }}>
+                        <Text style={{ fontSize: 44, marginBottom: 12 }}>{toast?.icon}</Text>
+                        <Text style={{ fontSize: 17, fontWeight: '700', color: '#111827', marginBottom: 4 }}>{toast?.title}</Text>
+                        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center' }}>{toast?.message}</Text>
+                    </View>
+                </View>
             </Modal>
         </View>
     );
