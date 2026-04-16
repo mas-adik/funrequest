@@ -2,9 +2,9 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and } from 'drizzle-orm';
-import { db } from '@/db/connection';
-import { users } from '@/db/schema';
-import { authMiddleware } from '@/middleware/auth';
+import { db } from '../db/connection.js';
+import { users } from '../db/schema.js';
+import { authMiddleware } from '../middleware/auth.js';
 import bcrypt from 'bcryptjs';
 
 const usersRouter = new Hono<{ Variables: { userId: string; role: string; tenantId: string } }>();

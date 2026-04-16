@@ -2,9 +2,9 @@ import { Hono } from 'hono';
 import { zValidator } from '@hono/zod-validator';
 import { z } from 'zod';
 import { eq, and, gte, lte } from 'drizzle-orm';
-import { db } from '@/db/connection';
-import { transactions } from '@/db/schema';
-import { authMiddleware } from '@/middleware/auth';
+import { db } from '../db/connection.js';
+import { transactions } from '../db/schema.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const transactionsRouter = new Hono<{ Variables: { userId: string; role: string; tenantId: string } }>();
 transactionsRouter.use('*', authMiddleware);

@@ -1,6 +1,6 @@
 import bcrypt from 'bcryptjs';
 import { SignJWT, jwtVerify } from 'jose';
-import type { JWTPayload } from '@/types';
+import type { JWTPayload } from '../types/index.js';
 
 /**
  * Hash a plain text password using bcryptjs

@@ -5,7 +5,7 @@
     "type": "module",
     "scripts": {
         "dev": "tsx watch src/index.ts",
-        "build": "tsc && tsc-alias",
+        "build": "tsc",
         "start": "node dist/index.js",
         "db:migrate": "tsx src/db/migrate.ts"
     },
@@ -22,7 +22,6 @@
     },
     "devDependencies": {
         "tsx": "^4.7.0",
-        "tsc-alias": "^1.8.0",
         "typescript": "^5.3.0",
         "@types/better-sqlite3": "^7.6.0",
         "@types/bcryptjs": "^2.4.6",

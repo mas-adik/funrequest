@@ -5,9 +5,9 @@ import { eq, and } from 'drizzle-orm';
 import { SignJWT } from 'jose';
 import bcrypt from 'bcryptjs';
 import crypto from 'crypto';
-import { db } from '@/db/connection';
-import { users, tenants, departments } from '@/db/schema';
-import type { RegisterOwnerRequest, RegisterUserRequest } from '@/types';
+import { db } from '../db/connection.js';
+import { users, tenants, departments } from '../db/schema.js';
+import type { RegisterOwnerRequest, RegisterUserRequest } from '../types/index.js';
 
 const auth = new Hono();
 

@@ -1,7 +1,7 @@
 import { createMiddleware } from 'hono/factory';
 import { HTTPException } from 'hono/http-exception';
 import { jwtVerify } from 'jose';
-import type { JWTPayload } from '@/types';
+import type { JWTPayload } from '../types/index.js';
 
 function getJwtSecret(): Uint8Array {
     const secret = process.env.JWT_SECRET;

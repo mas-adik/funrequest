@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
 import { eq, and, gte, lte, desc } from 'drizzle-orm';
-import { db } from '@/db/connection';
-import { transactions, fundRequests } from '@/db/schema';
-import { authMiddleware } from '@/middleware/auth';
+import { db } from '../db/connection.js';
+import { transactions, fundRequests } from '../db/schema.js';
+import { authMiddleware } from '../middleware/auth.js';
 
 const reportsRouter = new Hono<{ Variables: { userId: string; role: string; tenantId: string } }>();
 reportsRouter.use('*', authMiddleware);
