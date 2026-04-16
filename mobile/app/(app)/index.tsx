@@ -383,60 +383,77 @@ export default function FundRequestScreen() {
 
             <ScrollView
                 className="flex-1"
-                contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
+                contentContainerStyle={{ padding: 16, paddingBottom: 100 }}
                 refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} />}
             >
                 {/* Info Banner */}
-                <View className="bg-primary-600 rounded-2xl p-5 mb-5">
-                    <Text className="text-white text-xs font-semibold opacity-80 mb-1">Selamat datang,</Text>
-                    <Text className="text-white text-xl font-bold">{user?.full_name}</Text>
-                    <Text className="text-white opacity-80 text-sm mt-0.5">
+                <View style={{ backgroundColor: '#1D4ED8', borderRadius: 16, padding: 20, marginBottom: 20 }}>
+                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', opacity: 0.8, marginBottom: 2 }}>Selamat datang,</Text>
+                    <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800' }}>{user?.full_name}</Text>
+                    <Text style={{ color: '#fff', opacity: 0.8, fontSize: 13, marginTop: 2 }}>
                         {user?.department} • {user?.role === 'ADMIN' ? '👑 Admin' : 'Staff'}
                     </Text>
                 </View>
 
-                {/* Tombol Buat Pengajuan */}
-                <Button
-                    variant="primary"
-                    size="lg"
-                    onPress={() => setShowForm(true)}
-                    className="w-full mb-6"
-                >
-                    + Buat Fund Request Baru
-                </Button>
-
                 {/* Riwayat Pengajuan */}
-                <Text className="text-gray-700 font-bold text-base mb-3">Riwayat Pengajuan</Text>
+                <Text style={{ color: '#374151', fontWeight: '700', fontSize: 15, marginBottom: 12 }}>Riwayat Pengajuan</Text>
 
                 {loadingHistory ? (
                     <ActivityIndicator color="#2563EB" />
                 ) : history.length === 0 ? (
                     <View className="items-center py-12">
                         <Text style={{ fontSize: 48 }}>📋</Text>
-                        <Text className="text-gray-500 mt-3">Belum ada pengajuan</Text>
+                        <Text style={{ color: '#9CA3AF', marginTop: 12 }}>Belum ada pengajuan</Text>
                     </View>
                 ) : (
                     history.map(fr => (
                         <TouchableOpacity
                             key={fr.id}
                             onPress={() => printFundRequest(fr)}
-                            className="bg-white rounded-2xl p-4 mb-3 shadow-sm border border-gray-100"
+                            style={{
+                                backgroundColor: '#fff', borderRadius: 14, padding: 16,
+                                marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6',
+                            }}
                         >
-                            <View className="flex-row justify-between items-start mb-2">
-                                <View className="flex-1 mr-3">
-                                    <Text className="font-bold text-gray-800">{formatRupiah(fr.amount)}</Text>
-                                    <Text className="text-gray-500 text-sm mt-0.5" numberOfLines={2}>{fr.description}</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+                                <View style={{ flex: 1, marginRight: 12 }}>
+                                    <Text style={{ fontWeight: '700', color: '#1F2937' }}>{formatRupiah(fr.amount)}</Text>
+                                    <Text style={{ color: '#9CA3AF', fontSize: 13, marginTop: 2 }} numberOfLines={2}>{fr.description}</Text>
                                 </View>
                                 {statusBadge(fr.status)}
                             </View>
-                            <View className="flex-row justify-between">
-                                <Text className="text-gray-400 text-xs">{fr.department}</Text>
-                                <Text className="text-gray-400 text-xs">{formatDate(fr.request_date)} • 🖨 Cetak</Text>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between' }}>
+                                <Text style={{ color: '#D1D5DB', fontSize: 11 }}>{fr.department}</Text>
+                                <Text style={{ color: '#D1D5DB', fontSize: 11 }}>{formatDate(fr.request_date)} • 🖨</Text>
                             </View>
                         </TouchableOpacity>
                     ))
                 )}
             </ScrollView>
+
+            {/* FAB — Floating Action Button */}
+            <TouchableOpacity
+                onPress={() => setShowForm(true)}
+                activeOpacity={0.85}
+                style={{
+                    position: 'absolute',
+                    bottom: 24,
+                    right: 20,
+                    width: 56,
+                    height: 56,
+                    borderRadius: 28,
+                    backgroundColor: '#1D4ED8',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    elevation: 6,
+                    shadowColor: '#1D4ED8',
+                    shadowOffset: { width: 0, height: 4 },
+                    shadowOpacity: 0.35,
+                    shadowRadius: 8,
+                }}
+            >
+                <Text style={{ color: '#fff', fontSize: 28, fontWeight: '300', marginTop: -2 }}>+</Text>
+            </TouchableOpacity>
 
             {/* Modal Form Pengajuan */}
             <Modal visible={showForm} animationType="slide" presentationStyle="pageSheet">

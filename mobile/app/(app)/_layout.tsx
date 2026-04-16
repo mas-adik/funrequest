@@ -1,18 +1,19 @@
 import { Tabs } from 'expo-router';
 import { View, Text } from 'react-native';
 
-// Ikon Tab sederhana menggunakan emoji/teks ─ bisa diganti react-native-vector-icons
 function TabIcon({ icon, label, focused }: { icon: string; label: string; focused: boolean }) {
     return (
-        <View className="items-center justify-center pt-1">
-            <Text style={{ fontSize: 22, opacity: focused ? 1 : 0.5 }}>{icon}</Text>
+        <View style={{ alignItems: 'center', justifyContent: 'center', paddingTop: 6 }}>
+            <Text style={{ fontSize: 20 }}>{icon}</Text>
             <Text
                 style={{
-                    fontSize: 10,
-                    fontWeight: focused ? '700' : '400',
-                    color: focused ? '#2563EB' : '#6B7280',
-                    marginTop: 2,
+                    fontSize: 11,
+                    fontWeight: focused ? '700' : '500',
+                    color: focused ? '#1D4ED8' : '#9CA3AF',
+                    marginTop: 3,
+                    letterSpacing: 0.2,
                 }}
+                numberOfLines={1}
             >
                 {label}
             </Text>
@@ -24,24 +25,24 @@ export default function AppLayout() {
     return (
         <Tabs
             screenOptions={{
-                headerStyle: { backgroundColor: '#1D4ED8' },
+                headerStyle: { backgroundColor: '#1D4ED8', elevation: 0, shadowOpacity: 0 },
                 headerTintColor: '#fff',
-                headerTitleStyle: { fontWeight: 'bold', fontSize: 18 },
+                headerTitleStyle: { fontWeight: '700', fontSize: 17 },
                 tabBarStyle: {
-                    height: 70,
-                    paddingBottom: 8,
-                    paddingTop: 4,
+                    height: 64,
+                    paddingBottom: 6,
+                    paddingTop: 2,
                     backgroundColor: '#fff',
-                    borderTopWidth: 1,
+                    borderTopWidth: 0.5,
                     borderTopColor: '#E5E7EB',
-                    elevation: 8,
+                    elevation: 12,
                     shadowColor: '#000',
-                    shadowOffset: { width: 0, height: -2 },
-                    shadowOpacity: 0.08,
-                    shadowRadius: 6,
+                    shadowOffset: { width: 0, height: -4 },
+                    shadowOpacity: 0.06,
+                    shadowRadius: 8,
                 },
                 tabBarShowLabel: false,
-                tabBarActiveTintColor: '#2563EB',
+                tabBarActiveTintColor: '#1D4ED8',
                 tabBarInactiveTintColor: '#9CA3AF',
             }}
         >
@@ -66,16 +67,16 @@ export default function AppLayout() {
             <Tabs.Screen
                 name="report"
                 options={{
-                    title: 'Report / Closing',
+                    title: 'Laporan',
                     tabBarIcon: ({ focused }) => (
-                        <TabIcon icon="📊" label="Report" focused={focused} />
+                        <TabIcon icon="📊" label="Laporan" focused={focused} />
                     ),
                 }}
             />
             <Tabs.Screen
                 name="profile"
                 options={{
-                    title: 'Profil Saya',
+                    title: 'Profil',
                     tabBarIcon: ({ focused }) => (
                         <TabIcon icon="👤" label="Profil" focused={focused} />
                     ),
