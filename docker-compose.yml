@@ -18,16 +18,6 @@ services:
       timeout: 5s
       retries: 3
 
-  # ── Frontend (Expo Web + nginx) ────────────────────────────
-  frontend:
-    image: ghcr.io/mas-adik/funrequest-frontend:latest
-    container_name: fundrequest-frontend
-    ports:
-      - "3100:80"
-    depends_on:
-      - backend
-    restart: unless-stopped
-
   # ── (Opsional) Watchtower: auto-update saat ada image baru ─
   # watchtower:
   #   image: containrrr/watchtower
@@ -38,7 +28,7 @@ services:
   #     - WATCHTOWER_CLEANUP=true
   #   restart: unless-stopped
 
-# ── Named volume: Docker auto-create, aman di Synology NAS ──
+# ── Named volume ─────────────────────────────────────────────
 volumes:
   fundrequest-data:
     driver: local
