@@ -52,7 +52,10 @@ export default function TransaksiScreen() {
             ]);
             if (balRes.success && balRes.data) setBalance(balRes.data);
             if (txRes.success && txRes.data) {
-                const sorted = [...txRes.data].sort((a, b) =>
+                // Filter out auto-created FR transactions (IN from approve)
+                // They are already reflected in FUND REQUEST balance
+                const manualTx = txRes.data.filter(tx => tx.category !== 'Fund Request');
+                const sorted = [...manualTx].sort((a, b) =>
                     new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
                 );
                 setTransactions(sorted);
