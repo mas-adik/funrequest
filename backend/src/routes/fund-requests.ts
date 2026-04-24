@@ -168,6 +168,8 @@ fundRequestsRouter.delete('/:id', async (c) => {
             .get();
         if (!fr) return c.json({ success: false, error: 'Fund request tidak ditemukan' }, 404);
 
+        // Hapus transaksi terkait (cascade)
+        await db.delete(transactions).where(eq(transactions.fund_request_id, id));
         await db.delete(fundRequests).where(eq(fundRequests.id, id));
         return c.json({ success: true, data: null });
     } catch (error) {

@@ -118,9 +118,8 @@ export default function TransaksiScreen() {
     }
 
     const saldoAwal = balance?.initial_balance || 0;
-    const totalIn = balance?.total_income || 0;
     const totalOut = balance?.total_expense || 0;
-    const sisa = balance?.remaining_balance || 0;
+    const sisa = saldoAwal - totalOut;
     const isPositive = sisa >= 0;
 
     return (
@@ -141,16 +140,11 @@ export default function TransaksiScreen() {
                         <Text style={{ color: '#FCA5A5', fontSize: 11, textAlign: 'center', marginTop: 2 }}>⚠ Melebihi budget</Text>
                     )}
 
-                    {/* 3-column stats */}
-                    <View style={{ flexDirection: 'row', marginTop: 16, justifyContent: 'space-between' }}>
+                    {/* 2-column stats */}
+                    <View style={{ flexDirection: 'row', marginTop: 16 }}>
                         <View style={{ flex: 1, alignItems: 'center' }}>
-                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '600' }}>SALDO AWAL</Text>
+                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '600' }}>FUND REQUEST</Text>
                             <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', marginTop: 2 }}>{formatRupiah(saldoAwal)}</Text>
-                        </View>
-                        <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.2)' }} />
-                        <View style={{ flex: 1, alignItems: 'center' }}>
-                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '600' }}>MASUK</Text>
-                            <Text style={{ color: '#86EFAC', fontSize: 13, fontWeight: '700', marginTop: 2 }}>+{formatRupiah(totalIn)}</Text>
                         </View>
                         <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.2)' }} />
                         <View style={{ flex: 1, alignItems: 'center' }}>
