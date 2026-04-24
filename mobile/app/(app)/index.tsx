@@ -791,17 +791,19 @@ export default function FundRequestScreen() {
                             </TouchableOpacity>
                         )}
 
-                        {/* Cetak PDF — always */}
-                        <TouchableOpacity
-                            onPress={() => { if (menuFR) printFundRequest(menuFR); setMenuFR(null); }}
-                            style={{
-                                flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
-                                borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-                            }}
-                        >
-                            <Text style={{ fontSize: 18, marginRight: 14 }}>🖨</Text>
-                            <Text style={{ fontSize: 15, color: '#374151', fontWeight: '600' }}>Cetak PDF</Text>
-                        </TouchableOpacity>
+                        {/* Cetak PDF — only when not PENDING */}
+                        {menuFR?.status !== 'PENDING' && (
+                            <TouchableOpacity
+                                onPress={() => { if (menuFR) printFundRequest(menuFR); setMenuFR(null); }}
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+                                    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                                }}
+                            >
+                                <Text style={{ fontSize: 18, marginRight: 14 }}>🖨</Text>
+                                <Text style={{ fontSize: 15, color: '#374151', fontWeight: '600' }}>Cetak PDF</Text>
+                            </TouchableOpacity>
+                        )}
 
                         {/* Delete — PENDING or APPROVED */}
                         {(menuFR?.status === 'PENDING' || menuFR?.status === 'APPROVED') && (
