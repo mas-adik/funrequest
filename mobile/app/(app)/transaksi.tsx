@@ -16,7 +16,7 @@ function formatDate(d: string) {
     return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
-const CATEGORIES = ['Transport', 'Konsumsi', 'ATK', 'Kebersihan', 'Lain-lain'];
+
 
 export default function TransaksiScreen() {
     const [balance, setBalance] = useState<BalanceSummary | null>(null);
@@ -82,7 +82,7 @@ export default function TransaksiScreen() {
     const handleSubmit = async () => {
         setFormErrors({});
         const errs: Record<string, string> = {};
-        if (!category) errs.category = 'Pilih kategori';
+        if (!description.trim()) errs.description = 'Deskripsi wajib diisi';
         if (!amount || amount <= 0) errs.amount = 'Nominal harus lebih dari 0';
         if (Object.keys(errs).length > 0) { setFormErrors(errs); return; }
 
@@ -90,7 +90,7 @@ export default function TransaksiScreen() {
         try {
             const res = await transactionApi.create({
                 type: 'OUT',
-                category,
+                category: description.trim(),
                 description,
                 amount,
                 transaction_date: txDate,
@@ -275,49 +275,24 @@ export default function TransaksiScreen() {
                         contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
                         keyboardShouldPersistTaps="handled"
                     >
-                        {/* Kategori */}
-                        <FormSection title="Kategori">
-                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                {CATEGORIES.map(cat => {
-                                    const selected = category === cat;
-                                    return (
-                                        <TouchableOpacity
-                                            key={cat}
-                                            onPress={() => setCategory(cat)}
-                                            style={{
-                                                paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
-                                                borderWidth: 1.5,
-                                                borderColor: selected ? '#DC2626' : '#E5E7EB',
-                                                backgroundColor: selected ? '#FEE2E2' : '#fff',
-                                            }}
-                                        >
-                                            <Text style={{
-                                                fontSize: 13, fontWeight: '600',
-                                                color: selected ? '#DC2626' : '#6B7280',
-                                            }}>{cat}</Text>
-                                        </TouchableOpacity>
-                                    );
-                                })}
-                            </View>
-                            {formErrors.category && (
-                                <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 6 }}>{formErrors.category}</Text>
-                            )}
-                        </FormSection>
-
-                        <FormSection title="Keterangan (Opsional)">
-                            <Input
-                                value={description}
-                                onChangeText={setDescription}
-                                placeholder="Detail transaksi..."
-                            />
-                        </FormSection>
-
                         <FormSection title="Tanggal">
                             <Input
                                 value={txDate}
                                 onChangeText={setTxDate}
                                 placeholder="YYYY-MM-DD"
+                                hint="Format: YYYY-MM-DD"
                             />
+                        </FormSection>
+
+                        <FormSection title="Deskripsi">
+                            <Input
+                                value={description}
+                                onChangeText={setDescription}
+                                placeholder="Keterangan pengeluaran..."
+                            />
+                            {formErrors.description && (
+                                <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{formErrors.description}</Text>
+                            )}
                         </FormSection>
 
                         <FormSection title="Nominal">
