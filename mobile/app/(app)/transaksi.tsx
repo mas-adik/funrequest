@@ -4,6 +4,7 @@ import {
     Modal, RefreshControl, ActivityIndicator,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from 'expo-router';
 import { Input } from '@/components/Input';
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { FormSection } from '@/components/FormSection';
@@ -15,8 +16,6 @@ function formatRupiah(v: number) { return 'Rp ' + v.toLocaleString('id-ID'); }
 function formatDate(d: string) {
     return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
-
-
 
 export default function TransaksiScreen() {
     const [balance, setBalance] = useState<BalanceSummary | null>(null);
@@ -68,6 +67,9 @@ export default function TransaksiScreen() {
     }, [loadData]);
 
     useEffect(() => { loadData(); }, [loadData]);
+
+    // Auto-refresh setiap kali tab IN-OUT difokuskan
+    useFocusEffect(useCallback(() => { loadData(); }, [loadData]));
 
     const openForm = () => {
         setTxType('OUT');
