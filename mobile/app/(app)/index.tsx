@@ -481,7 +481,12 @@ export default function FundRequestScreen() {
 
             {/* FAB — Floating Action Button */}
             <TouchableOpacity
-                onPress={() => setShowForm(true)}
+                onPress={() => {
+                    setItems([{ ...DEFAULT_ITEM }]);
+                    setRequestDate(todayISO());
+                    setFormErrors({});
+                    setShowForm(true);
+                }}
                 activeOpacity={0.85}
                 style={{
                     position: 'absolute',
@@ -629,15 +634,7 @@ export default function FundRequestScreen() {
                             </Text>
                         </TouchableOpacity>
 
-                        <TouchableOpacity
-                            onPress={() => setShowForm(false)}
-                            style={{
-                                borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14,
-                                paddingVertical: 14, alignItems: 'center',
-                            }}
-                        >
-                            <Text style={{ color: '#6B7280', fontSize: 14, fontWeight: '600' }}>Batal</Text>
-                        </TouchableOpacity>
+
                     </ScrollView>
                 </View>
             </Modal>
