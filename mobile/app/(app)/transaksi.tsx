@@ -16,8 +16,7 @@ function formatDate(d: string) {
     return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
 }
 
-const CATEGORIES_OUT = ['Transport', 'Konsumsi', 'ATK', 'Kebersihan', 'Lain-lain'];
-const CATEGORIES_IN  = ['Kembalian', 'Pendapatan Lain', 'Transfer Tambahan'];
+const CATEGORIES = ['Transport', 'Konsumsi', 'ATK', 'Kebersihan', 'Lain-lain'];
 
 export default function TransaksiScreen() {
     const [balance, setBalance] = useState<BalanceSummary | null>(null);
@@ -70,8 +69,8 @@ export default function TransaksiScreen() {
 
     useEffect(() => { loadData(); }, [loadData]);
 
-    const openForm = (type: TransactionType) => {
-        setTxType(type);
+    const openForm = () => {
+        setTxType('OUT');
         setCategory('');
         setDescription('');
         setAmount(0);
@@ -90,7 +89,7 @@ export default function TransaksiScreen() {
         setSubmitting(true);
         try {
             const res = await transactionApi.create({
-                type: txType,
+                type: 'OUT',
                 category,
                 description,
                 amount,
@@ -108,7 +107,7 @@ export default function TransaksiScreen() {
         } finally { setSubmitting(false); }
     };
 
-    const categories = txType === 'OUT' ? CATEGORIES_OUT : CATEGORIES_IN;
+
 
     if (loading) {
         return (
@@ -161,28 +160,6 @@ export default function TransaksiScreen() {
                     </View>
                 </View>
 
-                {/* Action Buttons */}
-                <View style={{ flexDirection: 'row', gap: 10, marginBottom: 12 }}>
-                    <TouchableOpacity
-                        onPress={() => openForm('OUT')}
-                        style={{
-                            flex: 1, backgroundColor: '#FEE2E2', borderRadius: 12,
-                            paddingVertical: 12, alignItems: 'center',
-                        }}
-                    >
-                        <Text style={{ color: '#DC2626', fontSize: 13, fontWeight: '700' }}>− Pengeluaran</Text>
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                        onPress={() => openForm('IN')}
-                        style={{
-                            flex: 1, backgroundColor: '#D1FAE5', borderRadius: 12,
-                            paddingVertical: 12, alignItems: 'center',
-                        }}
-                    >
-                        <Text style={{ color: '#059669', fontSize: 13, fontWeight: '700' }}>+ Pemasukan</Text>
-                    </TouchableOpacity>
-                </View>
-
                 <Text style={{ color: '#374151', fontWeight: '700', fontSize: 15, marginBottom: 8 }}>Riwayat Transaksi</Text>
             </View>
 
@@ -233,18 +210,21 @@ export default function TransaksiScreen() {
                                     <Text style={{ color: '#D1D5DB', fontSize: 10, marginTop: 2 }}>{formatDate(tx.transaction_date)}</Text>
                                 </View>
 
-                                {/* Amount + menu */}
+                                {/* Amount + optional delete */}
                                 <View style={{ alignItems: 'flex-end' }}>
                                     <Text style={{ fontWeight: '700', fontSize: 13, color: isOut ? '#DC2626' : '#059669' }}>
                                         {isOut ? '−' : '+'} {formatRupiah(tx.amount)}
                                     </Text>
-                                    <TouchableOpacity
-                                        onPress={() => setDeleteTx(tx)}
-                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                        style={{ marginTop: 4 }}
-                                    >
-                                        <Text style={{ color: '#D1D5DB', fontSize: 10 }}>Hapus</Text>
-                                    </TouchableOpacity>
+                                    {/* Only show delete for manual OUT transactions, not FR-sourced IN */}
+                                    {isOut && (
+                                        <TouchableOpacity
+                                            onPress={() => setDeleteTx(tx)}
+                                            hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                            style={{ marginTop: 4 }}
+                                        >
+                                            <Text style={{ color: '#D1D5DB', fontSize: 10 }}>Hapus</Text>
+                                        </TouchableOpacity>
+                                    )}
                                 </View>
                             </View>
                         );
@@ -252,7 +232,22 @@ export default function TransaksiScreen() {
                 )}
             </ScrollView>
 
-            {/* ══ Form Transaksi ══ */}
+            {/* FAB — Floating Action Button for Pengeluaran */}
+            <TouchableOpacity
+                onPress={openForm}
+                activeOpacity={0.85}
+                style={{
+                    position: 'absolute', bottom: 24, right: 20,
+                    width: 56, height: 56, borderRadius: 28,
+                    backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center',
+                    elevation: 6, shadowColor: '#DC2626',
+                    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8,
+                }}
+            >
+                <Text style={{ color: '#fff', fontSize: 28, fontWeight: '300', marginTop: -2 }}>−</Text>
+            </TouchableOpacity>
+
+            {/* ══ Form Pengeluaran ══ */}
             <Modal visible={showForm} animationType="slide" presentationStyle="pageSheet">
                 <View style={{ flex: 1, backgroundColor: '#fff' }}>
                     {/* Header */}
@@ -262,12 +257,8 @@ export default function TransaksiScreen() {
                         borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
                     }}>
                         <View>
-                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>
-                                {txType === 'OUT' ? 'Pengeluaran' : 'Pemasukan'}
-                            </Text>
-                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>
-                                {txType === 'OUT' ? 'Catat pengeluaran baru' : 'Catat pemasukan baru'}
-                            </Text>
+                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Pengeluaran</Text>
+                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Catat pengeluaran baru</Text>
                         </View>
                         <TouchableOpacity
                             onPress={() => setShowForm(false)}
@@ -287,9 +278,8 @@ export default function TransaksiScreen() {
                         {/* Kategori */}
                         <FormSection title="Kategori">
                             <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
-                                {categories.map(cat => {
+                                {CATEGORIES.map(cat => {
                                     const selected = category === cat;
-                                    const activeColor = txType === 'OUT' ? '#DC2626' : '#059669';
                                     return (
                                         <TouchableOpacity
                                             key={cat}
@@ -297,13 +287,13 @@ export default function TransaksiScreen() {
                                             style={{
                                                 paddingHorizontal: 14, paddingVertical: 8, borderRadius: 10,
                                                 borderWidth: 1.5,
-                                                borderColor: selected ? activeColor : '#E5E7EB',
-                                                backgroundColor: selected ? (txType === 'OUT' ? '#FEE2E2' : '#D1FAE5') : '#fff',
+                                                borderColor: selected ? '#DC2626' : '#E5E7EB',
+                                                backgroundColor: selected ? '#FEE2E2' : '#fff',
                                             }}
                                         >
                                             <Text style={{
                                                 fontSize: 13, fontWeight: '600',
-                                                color: selected ? activeColor : '#6B7280',
+                                                color: selected ? '#DC2626' : '#6B7280',
                                             }}>{cat}</Text>
                                         </TouchableOpacity>
                                     );
@@ -345,7 +335,7 @@ export default function TransaksiScreen() {
                             onPress={handleSubmit}
                             disabled={submitting}
                             style={{
-                                backgroundColor: txType === 'OUT' ? '#DC2626' : '#059669',
+                                backgroundColor: '#DC2626',
                                 borderRadius: 14, paddingVertical: 16, alignItems: 'center',
                                 opacity: submitting ? 0.6 : 1, marginTop: 8,
                             }}
