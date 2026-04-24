@@ -63,38 +63,37 @@ reportsRouter.get('/summary', async (c) => {
     }
 });
 
-// GET /reports/balance — saldo dari fund request terbaru
+// GET /reports/balance — saldo dari SEMUA fund request yang APPROVED
 reportsRouter.get('/balance', async (c) => {
     try {
         const userId   = c.get('userId');
         const tenantId = c.get('tenantId');
 
-        const latestFR = await db.select().from(fundRequests)
-            .where(and(eq(fundRequests.user_id, userId), eq(fundRequests.tenant_id, tenantId)))
-            .orderBy(desc(fundRequests.created_at))
-            .limit(1)
-            .get();
+        // Get all approved fund requests
+        const approvedFRs = await db.select().from(fundRequests)
+            .where(and(
+                eq(fundRequests.user_id, userId),
+                eq(fundRequests.tenant_id, tenantId),
+                eq(fundRequests.status, 'APPROVED')
+            ))
+            .all();
 
-        if (!latestFR) {
-            return c.json({
-                success: true,
-                data: { fund_request: null, initial_balance: 0, total_income: 0, total_expense: 0, remaining_balance: 0 },
-            });
-        }
+        const initialBalance = approvedFRs.reduce((sum, fr) => sum + fr.amount, 0);
 
+        // Get all transactions for this user
         const txs = await db.select().from(transactions)
-            .where(and(eq(transactions.user_id, userId), eq(transactions.fund_request_id, latestFR.id)))
+            .where(and(eq(transactions.user_id, userId), eq(transactions.tenant_id, tenantId)))
             .all();
 
         const totalIn  = txs.filter(tx => tx.type === 'IN').reduce((s, tx) => s + tx.amount, 0);
         const totalOut = txs.filter(tx => tx.type === 'OUT').reduce((s, tx) => s + tx.amount, 0);
-        const remaining = latestFR.amount + totalIn - totalOut;
+        const remaining = initialBalance + totalIn - totalOut;
 
         return c.json({
             success: true,
             data: {
-                fund_request:     latestFR,
-                initial_balance:  latestFR.amount,
+                fund_requests:    approvedFRs,
+                initial_balance:  initialBalance,
                 total_income:     totalIn,
                 total_expense:    totalOut,
                 remaining_balance: remaining,
