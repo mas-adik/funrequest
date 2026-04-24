@@ -80,6 +80,13 @@ export interface CreateFundRequestPayload {
     amount: number;
 }
 
+// ─── Form Item Type (for Fund Request form) ────────────────────────────────────
+export interface FRItem {
+    item: string;      // Keterangan/deskripsi item
+    qty: string;       // Jumlah/satuan item
+    amount: number;    // Harga/nominal item (dalam Rupiah)
+}
+
 // ─── Transaction Types ────────────────────────────────────────────────────────
 export type TransactionType = 'IN' | 'OUT';
 

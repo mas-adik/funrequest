@@ -13,11 +13,10 @@ services:
       - fundrequest-data:/app/data
     restart: unless-stopped
     healthcheck:
-      test: ["CMD", "wget", "-q", "--spider", "http://localhost:8787/"]
+      test: [ "CMD", "wget", "-q", "--spider", "http://localhost:8787/" ]
       interval: 30s
       timeout: 5s
       retries: 3
-
   # ── (Opsional) Watchtower: auto-update saat ada image baru ─
   # watchtower:
   #   image: containrrr/watchtower
@@ -28,7 +27,7 @@ services:
   #     - WATCHTOWER_CLEANUP=true
   #   restart: unless-stopped
 
-# ── Named volume ─────────────────────────────────────────────
+  # ── Named volume ─────────────────────────────────────────────
 volumes:
   fundrequest-data:
     driver: local

@@ -1,15 +1,17 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import {
     View, Text, ScrollView, Alert, TouchableOpacity,
-    Modal, ActivityIndicator, RefreshControl, TextInput,
+    Modal, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { CurrencyInput } from '@/components/CurrencyInput';
+import { FormSection } from '@/components/FormSection';
+import { ItemCard } from '@/components/ItemCard';
 import { useAuth } from '@/hooks/useAuth';
 import { fundRequestApi } from '@/lib/api';
-import type { FundRequest } from '@/types';
+import type { FundRequest, FRItem } from '@/types';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -27,35 +29,40 @@ function terbilang(num: number): string {
     const puluhan = ['', '', 'Dua Puluh', 'Tiga Puluh', 'Empat Puluh', 'Lima Puluh',
         'Enam Puluh', 'Tujuh Puluh', 'Delapan Puluh', 'Sembilan Puluh'];
 
-    if (num === 0) return 'Nol';
-    if (num < 0)  return 'Minus ' + terbilang(-num);
+    // Helper function yang tidak add "Rupiah" di akhir (untuk recursion)
+    function terbilanHelper(n: number): string {
+        if (n === 0) return '';
+        if (n < 10) return satuan[n];
+        if (n < 20) return belasan[n - 10];
+        if (n < 100) return puluhan[Math.floor(n / 10)] + (n % 10 !== 0 ? ' ' + satuan[n % 10] : '');
+        if (n < 1000) {
+            const ratusan = Math.floor(n / 100);
+            const sisa = n % 100;
+            return (ratusan === 1 ? 'Seratus' : satuan[ratusan] + ' Ratus') + 
+                   (sisa > 0 ? ' ' + terbilanHelper(sisa) : '');
+        }
+        if (n < 1000000) {
+            const ribuan = Math.floor(n / 1000);
+            const sisa = n % 1000;
+            return (ribuan === 1 ? 'Seribu' : terbilanHelper(ribuan) + ' Ribu') +
+                   (sisa > 0 ? ' ' + terbilanHelper(sisa) : '');
+        }
+        if (n < 1000000000) {
+            const jutaan = Math.floor(n / 1000000);
+            const sisa = n % 1000000;
+            return terbilanHelper(jutaan) + ' Juta' +
+                   (sisa > 0 ? ' ' + terbilanHelper(sisa) : '');
+        }
+        const miliaran = Math.floor(n / 1000000000);
+        const sisa = n % 1000000000;
+        return terbilanHelper(miliaran) + ' Miliar' +
+               (sisa > 0 ? ' ' + terbilanHelper(sisa) : '');
+    }
 
-    let hasil = '';
-    if (num >= 1000000000) {
-        hasil += terbilang(Math.floor(num / 1000000000)) + ' Miliar ';
-        num %= 1000000000;
-    }
-    if (num >= 1000000) {
-        hasil += terbilang(Math.floor(num / 1000000)) + ' Juta ';
-        num %= 1000000;
-    }
-    if (num >= 1000) {
-        hasil += (Math.floor(num / 1000) === 1 ? 'Seribu ' : terbilang(Math.floor(num / 1000)) + ' Ribu ');
-        num %= 1000;
-    }
-    if (num >= 100) {
-        hasil += (Math.floor(num / 100) === 1 ? 'Seratus ' : satuan[Math.floor(num / 100)] + ' Ratus ');
-        num %= 100;
-    }
-    if (num >= 20) {
-        hasil += puluhan[Math.floor(num / 10)] + ' ';
-        num %= 10;
-    } else if (num >= 10) {
-        hasil += belasan[num - 10] + ' ';
-        num = 0;
-    }
-    if (num > 0) hasil += satuan[num] + ' ';
-    return hasil.trim() + ' Rupiah';
+    num = Math.floor(Math.max(0, num));
+    if (num === 0) return 'Nol';
+    if (num < 0) return 'Minus ' + terbilang(-num);
+    return terbilanHelper(num) + ' Rupiah';
 }
 
 // ─── Nomor Form: FR25/0001 ────────────────────────────────────────────────────
@@ -63,12 +70,6 @@ function frNumber(id: number | undefined): string {
     const yr = new Date().getFullYear().toString().slice(2); // '25'
     const seq = String(id || 0).padStart(4, '0');            // '0001'
     return `FR${yr}/${seq}`;
-}
-
-export interface FRItem {
-    item: string;   // Keterangan item
-    qty: string;    // Jumlah/satuan
-    amount: number; // Harga
 }
 
 function statusBadge(status: string) {
@@ -287,6 +288,11 @@ export default function FundRequestScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
+    // DEBUG: Check if code changes loaded
+    React.useEffect(() => {
+        console.log('✅ FundRequestScreen loaded - NEW VERSION');
+    }, []);
+
     // Menu & Approve modal state
     const [menuFR, setMenuFR] = useState<FundRequest | null>(null);
     const [showApprove, setShowApprove] = useState(false);
@@ -373,11 +379,11 @@ export default function FundRequestScreen() {
             });
 
             if (res.success && res.data) {
-                await printFundRequest(res.data, validItems);
                 setShowForm(false);
                 setItems([{ ...DEFAULT_ITEM }]);
                 setRequestDate(todayISO());
                 await loadHistory();
+                showToast('✅', 'Berhasil', 'Fund request disimpan');
             } else {
                 Alert.alert('Gagal', res.error || 'Terjadi kesalahan');
             }
@@ -499,220 +505,235 @@ export default function FundRequestScreen() {
 
             {/* Modal Form Pengajuan */}
             <Modal visible={showForm} animationType="slide" presentationStyle="pageSheet">
-                <ScrollView
-                    className="flex-1 bg-white"
-                    contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    {/* Modal Header */}
-                    <View className="flex-row justify-between items-center mb-5">
-                        <Text className="text-2xl font-bold text-gray-900">Fund Request</Text>
-                        <TouchableOpacity onPress={() => setShowForm(false)}>
-                            <Text className="text-gray-400 text-2xl">✕</Text>
+                <View style={{ flex: 1, backgroundColor: '#fff' }}>
+                    {/* Fixed Header */}
+                    <View style={{
+                        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
+                        borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                    }}>
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Fund Request</Text>
+                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Buat pengajuan dana baru</Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => setShowForm(false)}
+                            style={{
+                                width: 32, height: 32, borderRadius: 16,
+                                backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center',
+                            }}
+                        >
+                            <Text style={{ fontSize: 16, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
                         </TouchableOpacity>
                     </View>
 
-                    {/* Info otomatis dari profil */}
-                    <View className="bg-primary-50 rounded-2xl p-4 mb-4 border border-primary-100">
-                        <Text className="text-primary-700 text-xs font-semibold mb-1">ℹ️ Terisi otomatis dari profil</Text>
-                        <Text className="text-gray-700 text-sm">
-                            <Text className="font-semibold">Requested by: </Text>{user?.full_name}
-                        </Text>
-                        <Text className="text-gray-700 text-sm">
-                            <Text className="font-semibold">Departemen: </Text>{user?.department}
-                        </Text>
-                    </View>
-
-                    {/* Tanggal */}
-                    <Input
-                        label="Tanggal Pengajuan"
-                        value={requestDate}
-                        onChangeText={setRequestDate}
-                        placeholder="YYYY-MM-DD"
-                        hint="Format: 2025-01-15"
-                    />
-
-                    {/* Tabel Item — NO | ITEM | QTY | PR NO. */}
-                    <View className="mb-4">
-                        <View className="flex-row justify-between items-center mb-2">
-                            <Text className="text-gray-700 font-semibold text-sm">Daftar Item</Text>
-                            <Text className="text-gray-400 text-xs">NO | ITEM | QTY | PR NO.</Text>
-                        </View>
-
-                        {/* Header kolom */}
-                        <View className="flex-row bg-gray-100 rounded-t-xl border border-gray-200 px-2 py-1.5">
-                            <Text className="w-8 text-center text-gray-600 text-xs font-bold">NO</Text>
-                            <Text className="flex-1 text-gray-600 text-xs font-bold ml-1">ITEM</Text>
-                            <Text className="w-12 text-center text-gray-600 text-xs font-bold">QTY</Text>
-                            <Text className="w-24 text-right text-gray-600 text-xs font-bold">PR NO. (Rp)</Text>
-                        </View>
-
-                        {/* Baris Item */}
-                        {items.map((item, index) => (
-                            <View key={index} className="flex-row items-center border-b border-x border-gray-200 px-2 py-1">
-                                {/* Nomor */}
-                                <Text className="w-8 text-center text-gray-500 text-xs">{index + 1}</Text>
-
-                                {/* Item / Keterangan */}
-                                <TextInput
-                                    className="flex-1 text-gray-800 text-xs ml-1 py-1.5 border-l border-gray-200 pl-2"
-                                    placeholder="Keterangan item..."
-                                    placeholderTextColor="#d1d5db"
-                                    value={item.item}
-                                    onChangeText={v => updateItem(index, 'item', v)}
-                                />
-
-                                {/* QTY */}
-                                <TextInput
-                                    className="w-12 text-center text-gray-800 text-xs border-l border-gray-200 py-1.5"
-                                    placeholder="1"
-                                    placeholderTextColor="#d1d5db"
-                                    value={item.qty}
-                                    onChangeText={v => updateItem(index, 'qty', v)}
-                                    keyboardType="default"
-                                />
-
-                                {/* PR NO / Harga */}
-                                <TextInput
-                                    className="w-24 text-right text-gray-800 text-xs border-l border-gray-200 py-1.5 pr-1"
-                                    placeholder="0"
-                                    placeholderTextColor="#d1d5db"
-                                    value={item.amount > 0 ? String(item.amount) : ''}
-                                    onChangeText={v => {
-                                        const num = parseInt(v.replace(/[^0-9]/g, '')) || 0;
-                                        updateItem(index, 'amount', num);
-                                    }}
-                                    keyboardType="numeric"
-                                />
-
-                                {/* Hapus baris */}
-                                <TouchableOpacity
-                                    onPress={() => removeItem(index)}
-                                    className="ml-2"
-                                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                                >
-                                    <Text className={`text-base ${items.length <= 1 ? 'text-gray-200' : 'text-danger-400'}`}>✕</Text>
-                                </TouchableOpacity>
+                    {/* Scrollable Form */}
+                    <ScrollView
+                        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+                        keyboardShouldPersistTaps="handled"
+                    >
+                        {/* Pemohon */}
+                        <FormSection title="Pemohon">
+                            <View style={{
+                                flexDirection: 'row', alignItems: 'center',
+                                backgroundColor: '#F0F5FF', borderRadius: 12, padding: 14,
+                            }}>
+                                <View style={{
+                                    width: 36, height: 36, borderRadius: 18,
+                                    backgroundColor: '#1D4ED8', alignItems: 'center', justifyContent: 'center',
+                                    marginRight: 12,
+                                }}>
+                                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>
+                                        {user?.full_name?.charAt(0)?.toUpperCase() || '?'}
+                                    </Text>
+                                </View>
+                                <View>
+                                    <Text style={{ color: '#1F2937', fontSize: 14, fontWeight: '600' }}>{user?.full_name}</Text>
+                                    <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 1 }}>{user?.department}</Text>
+                                </View>
                             </View>
-                        ))}
+                        </FormSection>
 
-                        {/* Baris Jumlah */}
-                        <View className="flex-row border border-t-0 border-gray-200 rounded-b-xl bg-gray-50 px-2 py-2">
-                            <Text className="flex-1 text-right text-gray-600 text-xs font-bold mr-2">Jumlah</Text>
-                            <Text className="w-24 text-right text-primary-700 text-sm font-bold pr-1">
-                                {totalAmount.toLocaleString('id-ID')}
-                            </Text>
-                            <View className="w-6" />
+                        {/* Tanggal */}
+                        <FormSection title="Tanggal Pengajuan">
+                            <Input
+                                value={requestDate}
+                                onChangeText={setRequestDate}
+                                placeholder="2025-01-15"
+                                hint="Format: YYYY-MM-DD"
+                            />
+                        </FormSection>
+
+                        {/* Items */}
+                        <FormSection title="Daftar Item">
+                            {items.map((item, index) => (
+                                <ItemCard
+                                    key={index}
+                                    item={item}
+                                    index={index}
+                                    onUpdate={updateItem}
+                                    onDelete={removeItem}
+                                    canDelete={items.length > 1}
+                                    error={formErrors[`item_${index}`]}
+                                />
+                            ))}
+
+                            <TouchableOpacity
+                                onPress={addItem}
+                                style={{
+                                    borderWidth: 1.5, borderStyle: 'dashed', borderColor: '#93C5FD',
+                                    borderRadius: 12, paddingVertical: 12, alignItems: 'center',
+                                    backgroundColor: '#F0F5FF',
+                                }}
+                            >
+                                <Text style={{ color: '#2563EB', fontWeight: '600', fontSize: 13 }}>+ Tambah Item</Text>
+                            </TouchableOpacity>
+
+                            {formErrors.items && (
+                                <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 6 }}>{formErrors.items}</Text>
+                            )}
+                        </FormSection>
+
+                        {/* Total Summary */}
+                        <View style={{
+                            backgroundColor: '#F9FAFB', borderRadius: 14, padding: 16,
+                            borderWidth: 1, borderColor: '#E5E7EB', marginBottom: 24,
+                        }}>
+                            <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' }}>
+                                <Text style={{ color: '#6B7280', fontWeight: '600', fontSize: 13 }}>Total</Text>
+                                <Text style={{ color: '#1D4ED8', fontWeight: '800', fontSize: 18 }}>
+                                    Rp {totalAmount.toLocaleString('id-ID')}
+                                </Text>
+                            </View>
+                            {totalAmount > 0 && (
+                                <Text style={{ color: '#6B7280', fontSize: 11, fontStyle: 'italic', marginTop: 8 }}>
+                                    {terbilang(totalAmount)}
+                                </Text>
+                            )}
+                            {formErrors.amount && (
+                                <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{formErrors.amount}</Text>
+                            )}
                         </View>
 
-                        {/* Error & Tombol Tambah */}
-                        {formErrors.items && (
-                            <Text className="text-danger-600 text-xs mt-1">{formErrors.items}</Text>
-                        )}
-                        {formErrors.amount && (
-                            <Text className="text-danger-600 text-xs mt-0.5">{formErrors.amount}</Text>
-                        )}
+                        {/* Buttons */}
+                        <TouchableOpacity
+                            onPress={handleSubmit}
+                            disabled={submitting}
+                            style={{
+                                backgroundColor: '#1D4ED8', borderRadius: 14, paddingVertical: 16,
+                                alignItems: 'center', marginBottom: 10, opacity: submitting ? 0.6 : 1,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                {submitting ? 'Memproses...' : 'Submit Request'}
+                            </Text>
+                        </TouchableOpacity>
 
                         <TouchableOpacity
-                            onPress={addItem}
-                            className="mt-3 border-2 border-dashed border-primary-300 rounded-xl py-3 items-center"
+                            onPress={() => setShowForm(false)}
+                            style={{
+                                borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14,
+                                paddingVertical: 14, alignItems: 'center',
+                            }}
                         >
-                            <Text className="text-primary-600 font-semibold text-sm">+ Tambah Baris Item</Text>
+                            <Text style={{ color: '#6B7280', fontSize: 14, fontWeight: '600' }}>Batal</Text>
                         </TouchableOpacity>
-                    </View>
-
-                    {/* Terbilang preview */}
-                    {totalAmount > 0 && (
-                        <View className="bg-gray-50 rounded-xl p-3 mb-4 border border-gray-200">
-                            <Text className="text-gray-500 text-xs">Terbilang:</Text>
-                            <Text className="text-gray-700 text-xs italic mt-0.5">{terbilang(totalAmount)}</Text>
-                        </View>
-                    )}
-
-                    <Button
-                        variant="primary"
-                        size="lg"
-                        onPress={handleSubmit}
-                        loading={submitting}
-                        className="w-full mt-2"
-                    >
-                        Submit & Cetak PDF
-                    </Button>
-                    <Button
-                        variant="ghost"
-                        size="md"
-                        onPress={() => setShowForm(false)}
-                        className="w-full mt-2"
-                    >
-                        Batal
-                    </Button>
-                </ScrollView>
+                    </ScrollView>
+                </View>
             </Modal>
 
             {/* Modal Edit Fund Request */}
             <Modal visible={showEdit} animationType="slide" presentationStyle="pageSheet">
-                <ScrollView
-                    className="flex-1 bg-white"
-                    contentContainerStyle={{ padding: 24, paddingBottom: 48 }}
-                    keyboardShouldPersistTaps="handled"
-                >
-                    <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-                        <Text style={{ fontSize: 22, fontWeight: '700', color: '#111827' }}>Edit Fund Request</Text>
-                        <TouchableOpacity onPress={() => setShowEdit(false)}>
-                            <Text style={{ fontSize: 22, color: '#D1D5DB' }}>✕</Text>
+                <View style={{ flex: 1, backgroundColor: '#fff' }}>
+                    {/* Fixed Header */}
+                    <View style={{
+                        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
+                        borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                    }}>
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Edit Request</Text>
+                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Ubah detail pengajuan</Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => setShowEdit(false)}
+                            style={{
+                                width: 32, height: 32, borderRadius: 16,
+                                backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center',
+                            }}
+                        >
+                            <Text style={{ fontSize: 16, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
                         </TouchableOpacity>
                     </View>
 
-                    <Input
-                        label="Tanggal"
-                        value={editDate}
-                        onChangeText={setEditDate}
-                        placeholder="YYYY-MM-DD"
-                    />
-                    <Input
-                        label="Deskripsi"
-                        value={editDesc}
-                        onChangeText={setEditDesc}
-                        placeholder="Keterangan fund request"
-                    />
-                    <CurrencyInput
-                        label="Nominal"
-                        value={editAmount}
-                        onChangeValue={setEditAmount}
-                    />
-
-                    <Button
-                        variant="primary"
-                        size="lg"
-                        loading={editSaving}
-                        onPress={async () => {
-                            if (!editFR) return;
-                            setEditSaving(true);
-                            try {
-                                const res = await fundRequestApi.update(editFR.id, {
-                                    description: editDesc,
-                                    amount: editAmount,
-                                    request_date: editDate,
-                                });
-                                if (res.success) {
-                                    setShowEdit(false);
-                                    loadHistory();
-                                    showToast('✅', 'Berhasil', 'Fund request diperbarui');
-                                } else {
-                                    showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan');
-                                }
-                            } catch (e: any) {
-                                showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi');
-                            } finally { setEditSaving(false); }
-                        }}
-                        className="w-full mt-2"
+                    <ScrollView
+                        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
+                        keyboardShouldPersistTaps="handled"
                     >
-                        Simpan Perubahan
-                    </Button>
-                    <Button variant="ghost" size="md" onPress={() => setShowEdit(false)} className="w-full mt-2">
-                        Batal
-                    </Button>
-                </ScrollView>
+                        <FormSection title="Tanggal">
+                            <Input
+                                value={editDate}
+                                onChangeText={setEditDate}
+                                placeholder="YYYY-MM-DD"
+                            />
+                        </FormSection>
+                        <FormSection title="Deskripsi">
+                            <Input
+                                value={editDesc}
+                                onChangeText={setEditDesc}
+                                placeholder="Keterangan fund request"
+                            />
+                        </FormSection>
+                        <FormSection title="Nominal">
+                            <CurrencyInput
+                                value={editAmount}
+                                onChangeValue={setEditAmount}
+                            />
+                        </FormSection>
+
+                        <TouchableOpacity
+                            disabled={editSaving}
+                            onPress={async () => {
+                                if (!editFR) return;
+                                setEditSaving(true);
+                                try {
+                                    const res = await fundRequestApi.update(editFR.id, {
+                                        description: editDesc,
+                                        amount: editAmount,
+                                        request_date: editDate,
+                                    });
+                                    if (res.success) {
+                                        setShowEdit(false);
+                                        loadHistory();
+                                        showToast('✅', 'Berhasil', 'Fund request diperbarui');
+                                    } else {
+                                        showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan');
+                                    }
+                                } catch (e: any) {
+                                    showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi');
+                                } finally { setEditSaving(false); }
+                            }}
+                            style={{
+                                backgroundColor: '#1D4ED8', borderRadius: 14, paddingVertical: 16,
+                                alignItems: 'center', marginBottom: 10, opacity: editSaving ? 0.6 : 1,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                {editSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => setShowEdit(false)}
+                            style={{
+                                borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14,
+                                paddingVertical: 14, alignItems: 'center',
+                            }}
+                        >
+                            <Text style={{ color: '#6B7280', fontSize: 14, fontWeight: '600' }}>Batal</Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
             </Modal>
 
             {/* ══ Bottom Sheet: Opsi Menu ══ */}
