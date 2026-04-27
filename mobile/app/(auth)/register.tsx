@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, ScrollView, KeyboardAvoidingView,
-    Platform, Alert, TouchableOpacity, TextInput,
+    Platform, Alert, TouchableOpacity, TextInput, Image,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -79,12 +79,11 @@ export default function RegisterScreen() {
 
                     {/* Logo & Title */}
                     <View style={{ alignItems: 'center', marginBottom: 32 }}>
-                        <View style={{
-                            width: 56, height: 56, borderRadius: 16, backgroundColor: '#1D4ED8',
-                            alignItems: 'center', justifyContent: 'center', marginBottom: 14,
-                        }}>
-                            <Text style={{ fontSize: 22, color: '#fff', fontWeight: '800' }}>FR</Text>
-                        </View>
+                        <Image
+                            source={require('../../assets/logo.png')}
+                            style={{ width: 60, height: 60, borderRadius: 16, marginBottom: 14 }}
+                            resizeMode="contain"
+                        />
                         <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827' }}>Buat Akun</Text>
                     </View>
 

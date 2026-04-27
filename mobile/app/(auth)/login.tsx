@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import {
     View, Text, ScrollView, KeyboardAvoidingView,
-    Platform, Alert, TouchableOpacity, TextInput,
+    Platform, Alert, TouchableOpacity, TextInput, Image,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -46,12 +46,11 @@ export default function LoginScreen() {
 
                     {/* Logo & Title */}
                     <View style={{ alignItems: 'center', marginBottom: 40 }}>
-                        <View style={{
-                            width: 64, height: 64, borderRadius: 18, backgroundColor: '#1D4ED8',
-                            alignItems: 'center', justifyContent: 'center', marginBottom: 16,
-                        }}>
-                            <Text style={{ fontSize: 28, color: '#fff', fontWeight: '800' }}>FR</Text>
-                        </View>
+                        <Image
+                            source={require('../../assets/logo.png')}
+                            style={{ width: 72, height: 72, borderRadius: 18, marginBottom: 16 }}
+                            resizeMode="contain"
+                        />
                         <Text style={{ fontSize: 24, fontWeight: '800', color: '#111827' }}>Selamat Datang</Text>
                         <Text style={{ fontSize: 14, color: '#9CA3AF', marginTop: 4 }}>Masuk ke akun Anda</Text>
                     </View>

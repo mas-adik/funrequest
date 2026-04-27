@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 200 200">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#0070C8"></stop>
+      <stop offset="100%" stop-color="#0060AF"></stop>
+    </linearGradient>
+  </defs>
+  <rect width="200" height="200" rx="44" fill="url(#bg)"></rect>
+  <path d="M52 36 H148 V154 L138 146 L128 154 L118 146 L108 154 L98 146 L88 154 L78 146 L68 154 L58 146 L52 154 Z" fill="#FFFFFF"></path>
+  <rect x="64" y="50" width="72" height="6" rx="3" fill="#0060AF"></rect>
+  <rect x="64" y="64" width="48" height="4" rx="2" fill="#A8C4DE"></rect>
+  <rect x="64" y="84" width="44" height="4" rx="2" fill="#A8C4DE"></rect>
+  <rect x="116" y="84" width="20" height="4" rx="2" fill="#A8C4DE"></rect>
+  <rect x="64" y="98" width="36" height="4" rx="2" fill="#A8C4DE"></rect>
+  <rect x="116" y="98" width="20" height="4" rx="2" fill="#A8C4DE"></rect>
+  <rect x="64" y="114" width="72" height="2" fill="#0060AF"></rect>
+  <text x="68" y="134" font-family="&#39;Plus Jakarta Sans&#39;,&#39;Helvetica Neue&#39;,Arial,sans-serif" font-size="14" font-weight="800" fill="#0060AF">Rp</text>
+  <rect x="100" y="124" width="36" height="6" rx="2" fill="#0060AF"></rect>
+  <circle cx="156" cy="146" r="22" fill="#0060AF" stroke="#FFFFFF" stroke-width="3"></circle>
+  <path d="M147 146 l6 6 12 -12" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"></path>
+</svg>
