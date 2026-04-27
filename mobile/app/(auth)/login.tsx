@@ -95,8 +95,8 @@ export default function LoginScreen() {
                                 }}
                             />
                             <TouchableOpacity onPress={() => setShowPass(!showPass)} style={{ paddingRight: 16 }}>
-                                <Text style={{ color: '#1D4ED8', fontSize: 12, fontWeight: '600' }}>
-                                    {showPass ? 'Sembunyikan' : 'Tampilkan'}
+                                <Text style={{ fontSize: 18 }}>
+                                    {showPass ? '🙈' : '👁️'}
                                 </Text>
                             </TouchableOpacity>
                         </View>

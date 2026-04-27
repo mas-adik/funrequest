@@ -1,15 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import {
     View, Text, ScrollView, KeyboardAvoidingView,
     Platform, Alert, TouchableOpacity, TextInput,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { authApi, departmentsApi } from '@/lib/api';
+import { authApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
-import type { Department } from '@/types';
 
-const DEPT_SUGGESTIONS = ['Sales', 'Quality', 'HRD', 'Produksi'];
 
 export default function RegisterScreen() {
     const { login } = useAuth();
@@ -19,20 +17,7 @@ export default function RegisterScreen() {
     const [department, setDepartment] = useState('');
     const [showPass, setShowPass] = useState(false);
     const [loading, setLoading] = useState(false);
-    const [depts, setDepts] = useState<string[]>(DEPT_SUGGESTIONS);
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const [isFirstUser, setIsFirstUser] = useState(false);
-
-    useEffect(() => {
-        departmentsApi.getAll().then(res => {
-            if (res.success && res.data && res.data.length > 0) {
-                setDepts(res.data.map((d: Department) => d.name));
-                setIsFirstUser(false);
-            }
-        }).catch(() => {
-            setIsFirstUser(true);
-        });
-    }, []);
 
     const handleRegister = async () => {
         setErrors({});
@@ -45,18 +30,7 @@ export default function RegisterScreen() {
 
         setLoading(true);
         try {
-            let response;
-            if (isFirstUser) {
-                response = await authApi.registerOwner({
-                    tenant_name: 'Perusahaan',
-                    admin_name: fullName,
-                    email,
-                    password,
-                    department: department.trim(),
-                });
-            } else {
-                response = await authApi.registerUser({ full_name: fullName, email, password, department: department.trim() });
-            }
+            const response = await authApi.registerUser({ full_name: fullName, email, password, department: department.trim() });
 
             if (response.success && response.data) {
                 await login(response.data.token, response.data.user);
@@ -64,23 +38,7 @@ export default function RegisterScreen() {
                 Alert.alert('Gagal', response.error || 'Terjadi kesalahan');
             }
         } catch (error: any) {
-            const msg = error.response?.data?.error || 'Coba lagi nanti';
-            if (msg.includes('belum diinisialisasi') || error.response?.status === 400) {
-                try {
-                    const ownerRes = await authApi.registerOwner({
-                        tenant_name: 'Perusahaan',
-                        admin_name: fullName,
-                        email,
-                        password,
-                        department: department.trim(),
-                    });
-                    if (ownerRes.success && ownerRes.data) {
-                        await login(ownerRes.data.token, ownerRes.data.user);
-                        return;
-                    }
-                } catch { /* fallthrough */ }
-            }
-            Alert.alert('Gagal', msg);
+            Alert.alert('Gagal', error.response?.data?.error || 'Coba lagi nanti');
         } finally {
             setLoading(false);
         }
@@ -130,20 +88,6 @@ export default function RegisterScreen() {
                         <Text style={{ fontSize: 22, fontWeight: '800', color: '#111827' }}>Buat Akun</Text>
                     </View>
 
-                    {/* First user badge */}
-                    {isFirstUser && (
-                        <View style={{
-                            backgroundColor: '#FEF3C7', borderWidth: 1, borderColor: '#FDE68A',
-                            borderRadius: 12, padding: 12, marginBottom: 20,
-                            flexDirection: 'row', alignItems: 'center',
-                        }}>
-                            <Text style={{ fontSize: 16, marginRight: 8 }}>👑</Text>
-                            <Text style={{ color: '#92400E', fontSize: 12, fontWeight: '600', flex: 1 }}>
-                                Anda akan menjadi Admin pertama
-                            </Text>
-                        </View>
-                    )}
-
                     {/* Form */}
                     <InputField label="Nama Lengkap" value={fullName} onChangeText={setFullName} placeholder="Masukkan nama lengkap" error={errors.fullName} />
                     <InputField label="Email" value={email} onChangeText={setEmail} placeholder="nama@perusahaan.com" keyboardType="email-address" autoCapitalize="none" error={errors.email} />
@@ -156,20 +100,20 @@ export default function RegisterScreen() {
                         error={errors.password}
                         rightElement={
                             <TouchableOpacity onPress={() => setShowPass(!showPass)} style={{ paddingRight: 16 }}>
-                                <Text style={{ color: '#1D4ED8', fontSize: 12, fontWeight: '600' }}>
-                                    {showPass ? 'Sembunyikan' : 'Tampilkan'}
+                                <Text style={{ fontSize: 18 }}>
+                                    {showPass ? '🙈' : '👁️'}
                                 </Text>
                             </TouchableOpacity>
                         }
                     />
 
-                    {/* Departemen — free text + suggestion chips */}
+                    {/* Departemen — free text */}
                     <View style={{ marginBottom: 20 }}>
                         <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 }}>Departemen</Text>
                         <TextInput
                             value={department}
                             onChangeText={setDepartment}
-                            placeholder="Ketik atau pilih departemen"
+                            placeholder="Masukkan nama departemen"
                             placeholderTextColor="#D1D5DB"
                             style={{
                                 borderWidth: 1.5, borderColor: errors.department ? '#DC2626' : '#E5E7EB',
@@ -178,29 +122,6 @@ export default function RegisterScreen() {
                             }}
                         />
                         {errors.department && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{errors.department}</Text>}
-
-                        {/* Quick select chips */}
-                        <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginTop: 10 }}>
-                            <View style={{ flexDirection: 'row', gap: 8 }}>
-                                {depts.map(d => (
-                                    <TouchableOpacity
-                                        key={d}
-                                        onPress={() => setDepartment(d)}
-                                        style={{
-                                            paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20,
-                                            borderWidth: 1.5,
-                                            backgroundColor: department === d ? '#1D4ED8' : '#fff',
-                                            borderColor: department === d ? '#1D4ED8' : '#E5E7EB',
-                                        }}
-                                    >
-                                        <Text style={{
-                                            fontSize: 12, fontWeight: '600',
-                                            color: department === d ? '#fff' : '#6B7280',
-                                        }}>{d}</Text>
-                                    </TouchableOpacity>
-                                ))}
-                            </View>
-                        </ScrollView>
                     </View>
 
                     {/* Submit */}
@@ -216,7 +137,7 @@ export default function RegisterScreen() {
                         }}
                     >
                         <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
-                            {loading ? 'Memproses...' : isFirstUser ? 'Buat Akun Admin' : 'Daftar'}
+                            {loading ? 'Memproses...' : 'Daftar'}
                         </Text>
                     </TouchableOpacity>
 
