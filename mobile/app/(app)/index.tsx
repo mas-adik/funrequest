@@ -4,14 +4,15 @@ import {
     Modal, ActivityIndicator, RefreshControl,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
+import { useFocusEffect } from 'expo-router';
 import { Input } from '@/components/Input';
 import { Button } from '@/components/Button';
 import { CurrencyInput } from '@/components/CurrencyInput';
 import { FormSection } from '@/components/FormSection';
 import { ItemCard } from '@/components/ItemCard';
 import { useAuth } from '@/hooks/useAuth';
-import { fundRequestApi } from '@/lib/api';
-import type { FundRequest, FRItem } from '@/types';
+import { fundRequestApi, transactionApi, reportApi } from '@/lib/api';
+import type { FundRequest, FRItem, Transaction, BalanceSummary } from '@/types';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -288,10 +289,21 @@ export default function FundRequestScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
-    // DEBUG: Check if code changes loaded
-    React.useEffect(() => {
-        console.log('✅ FundRequestScreen loaded - NEW VERSION');
-    }, []);
+    // Balance + Transactions (merged from IN-OUT)
+    const [balance, setBalance] = useState<BalanceSummary | null>(null);
+    const [transactions, setTransactions] = useState<Transaction[]>([]);
+
+    // Expense form
+    const [showExpenseForm, setShowExpenseForm] = useState(false);
+    const [expDesc, setExpDesc] = useState('');
+    const [expAmount, setExpAmount] = useState(0);
+    const [expDate, setExpDate] = useState(todayISO());
+    const [expSubmitting, setExpSubmitting] = useState(false);
+    const [expErrors, setExpErrors] = useState<Record<string, string>>({});
+
+    // Delete expense
+    const [deleteTx, setDeleteTx] = useState<Transaction | null>(null);
+    const [deletingTx, setDeletingTx] = useState(false);
 
     // Menu & Approve modal state
     const [menuFR, setMenuFR] = useState<FundRequest | null>(null);
@@ -332,30 +344,46 @@ export default function FundRequestScreen() {
 
     const addItem = () => setItems(prev => [...prev, { ...DEFAULT_ITEM }]);
     const removeItem = (index: number) => {
-        if (items.length <= 1) return; // minimal 1 baris
+        if (items.length <= 1) return;
         setItems(prev => prev.filter((_, i) => i !== index));
     };
 
-    const loadHistory = useCallback(async () => {
+    const loadAll = useCallback(async () => {
         setLoadingHistory(true);
         try {
-            const res = await fundRequestApi.getAll();
-            if (res.success && res.data) {
-                const sorted = [...res.data].sort((a, b) =>
+            const [frRes, balRes, txRes] = await Promise.all([
+                fundRequestApi.getAll(),
+                reportApi.getBalance(),
+                transactionApi.getAll(),
+            ]);
+            if (frRes.success && frRes.data) {
+                const sorted = [...frRes.data].sort((a, b) =>
                     new Date(b.request_date).getTime() - new Date(a.request_date).getTime()
                 );
                 setHistory(sorted);
             }
+            if (balRes.success && balRes.data) setBalance(balRes.data);
+            if (txRes.success && txRes.data) {
+                const manualTx = txRes.data.filter(tx => tx.category !== 'Fund Request');
+                const sorted = [...manualTx].sort((a, b) =>
+                    new Date(b.transaction_date).getTime() - new Date(a.transaction_date).getTime()
+                );
+                setTransactions(sorted);
+            }
         } catch {/* silent */} finally { setLoadingHistory(false); }
     }, []);
 
+    // Alias for backward compat
+    const loadHistory = loadAll;
+
     const onRefresh = useCallback(async () => {
         setRefreshing(true);
-        await loadHistory();
+        await loadAll();
         setRefreshing(false);
-    }, [loadHistory]);
+    }, [loadAll]);
 
-    useEffect(() => { loadHistory(); }, [loadHistory]);
+    useEffect(() => { loadAll(); }, [loadAll]);
+    useFocusEffect(useCallback(() => { loadAll(); }, [loadAll]));
 
     const handleSubmit = async () => {
         setFormErrors({});
@@ -416,23 +444,58 @@ export default function FundRequestScreen() {
         }
     };
 
+    const saldoAwal = balance?.initial_balance || 0;
+    const totalOut = balance?.total_expense || 0;
+    const sisaBudget = saldoAwal - totalOut;
+    const isPositive = sisaBudget >= 0;
+
+    const formatDateShort = (d: string) => new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+
+    const handleExpenseSubmit = async () => {
+        setExpErrors({});
+        const errs: Record<string, string> = {};
+        if (!expDesc.trim()) errs.description = 'Deskripsi wajib diisi';
+        if (!expAmount || expAmount <= 0) errs.amount = 'Nominal harus lebih dari 0';
+        if (Object.keys(errs).length > 0) { setExpErrors(errs); return; }
+        setExpSubmitting(true);
+        try {
+            const res = await transactionApi.create({ type: 'OUT', category: expDesc.trim(), description: expDesc, amount: expAmount, transaction_date: expDate });
+            if (res.success) { setShowExpenseForm(false); loadAll(); showToast('✅', 'Berhasil', 'Pengeluaran disimpan'); }
+            else showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan');
+        } catch (e: any) { showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi'); }
+        finally { setExpSubmitting(false); }
+    };
+
     return (
         <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
             <StatusBar style="light" />
 
-            {/* Fixed Banner */}
+            {/* Fixed Summary Card */}
             <View style={{ paddingHorizontal: 16, paddingTop: 16 }}>
-                <View style={{ backgroundColor: '#1D4ED8', borderRadius: 16, padding: 20, marginBottom: 12 }}>
-                    <Text style={{ color: '#fff', fontSize: 12, fontWeight: '600', opacity: 0.8, marginBottom: 2 }}>Selamat datang,</Text>
-                    <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800' }}>{user?.full_name}</Text>
-                    <Text style={{ color: '#fff', opacity: 0.8, fontSize: 13, marginTop: 2 }}>
-                        {user?.department} • {user?.role === 'ADMIN' ? '👑 Admin' : 'Staff'}
+                <View style={{ backgroundColor: '#1D4ED8', borderRadius: 18, padding: 20, marginBottom: 12 }}>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 12, fontWeight: '600', textAlign: 'center' }}>Sisa Budget</Text>
+                    <Text style={{ color: '#fff', fontSize: 28, fontWeight: '800', textAlign: 'center', marginTop: 4 }}>
+                        {formatRupiah(Math.abs(sisaBudget))}
                     </Text>
+                    {!isPositive && (
+                        <Text style={{ color: '#FCA5A5', fontSize: 11, textAlign: 'center', marginTop: 2 }}>⚠ Melebihi budget</Text>
+                    )}
+                    <View style={{ flexDirection: 'row', marginTop: 16 }}>
+                        <View style={{ flex: 1, alignItems: 'center' }}>
+                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '600' }}>FUND REQUEST</Text>
+                            <Text style={{ color: '#fff', fontSize: 13, fontWeight: '700', marginTop: 2 }}>{formatRupiah(saldoAwal)}</Text>
+                        </View>
+                        <View style={{ width: 1, backgroundColor: 'rgba(255,255,255,0.2)' }} />
+                        <View style={{ flex: 1, alignItems: 'center' }}>
+                            <Text style={{ color: 'rgba(255,255,255,0.6)', fontSize: 10, fontWeight: '600' }}>KELUAR</Text>
+                            <Text style={{ color: '#FCA5A5', fontSize: 13, fontWeight: '700', marginTop: 2 }}>-{formatRupiah(totalOut)}</Text>
+                        </View>
+                    </View>
                 </View>
                 <Text style={{ color: '#374151', fontWeight: '700', fontSize: 15, marginBottom: 8 }}>Riwayat Pengajuan</Text>
             </View>
 
-            {/* Scrollable Cards Only */}
+            {/* Scrollable Cards */}
             <ScrollView
                 style={{ flex: 1 }}
                 contentContainerStyle={{ paddingHorizontal: 16, paddingBottom: 100 }}
@@ -446,63 +509,109 @@ export default function FundRequestScreen() {
                         <Text style={{ color: '#9CA3AF', marginTop: 12 }}>Belum ada pengajuan</Text>
                     </View>
                 ) : (
-                    history.map(fr => (
-                        <View
-                            key={fr.id}
-                            style={{
-                                backgroundColor: '#fff', borderRadius: 14, padding: 14,
-                                marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6',
-                                flexDirection: 'row',
-                            }}
-                        >
-                            {/* LEFT — Date + Deskripsi */}
-                            <View style={{ flex: 1, marginRight: 12 }}>
-                                <Text style={{ color: '#9CA3AF', fontSize: 11, marginBottom: 3 }}>{formatDate(fr.request_date)}</Text>
-                                <Text style={{ color: '#374151', fontSize: 13 }} numberOfLines={2}>{fr.description}</Text>
-                            </View>
-
-                            {/* RIGHT — Status+Menu row, Nominal */}
-                            <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 110 }}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                    {statusBadge(fr.status)}
-                                    <TouchableOpacity
-                                        hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-                                        onPress={() => setMenuFR(fr)}
-                                    >
-                                        <Text style={{ fontSize: 20, color: '#9CA3AF', fontWeight: '800' }}>⋯</Text>
-                                    </TouchableOpacity>
+                    history.map(fr => {
+                        // Find expenses linked to this FR (or all if no fund_request_id)
+                        const frTx = transactions.filter(tx => tx.fund_request_id === fr.id);
+                        return (
+                            <View key={fr.id} style={{
+                                backgroundColor: '#fff', borderRadius: 14,
+                                marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6', overflow: 'hidden',
+                            }}>
+                                {/* FR Card Row */}
+                                <View style={{ padding: 14, flexDirection: 'row' }}>
+                                    <View style={{ flex: 1, marginRight: 12 }}>
+                                        <Text style={{ color: '#9CA3AF', fontSize: 11, marginBottom: 3 }}>{formatDate(fr.request_date)}</Text>
+                                        <Text style={{ color: '#374151', fontSize: 13 }} numberOfLines={2}>{fr.description}</Text>
+                                    </View>
+                                    <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 110 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                            {statusBadge(fr.status)}
+                                            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} onPress={() => setMenuFR(fr)}>
+                                                <Text style={{ fontSize: 20, color: '#9CA3AF', fontWeight: '800' }}>⋯</Text>
+                                            </TouchableOpacity>
+                                        </View>
+                                        <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14, marginTop: 4 }}>{formatRupiah(fr.amount)}</Text>
+                                    </View>
                                 </View>
-                                <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14, marginTop: 4 }}>{formatRupiah(fr.amount)}</Text>
+
+                                {/* Sub: Transaction list for this FR */}
+                                {frTx.length > 0 && (
+                                    <View style={{ borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#FAFAFA' }}>
+                                        {frTx.map(tx => (
+                                            <View key={tx.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
+                                                <View style={{
+                                                    width: 24, height: 24, borderRadius: 12, marginRight: 10,
+                                                    backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center',
+                                                }}>
+                                                    <Text style={{ fontSize: 10, color: '#DC2626' }}>↓</Text>
+                                                </View>
+                                                <View style={{ flex: 1 }}>
+                                                    <Text style={{ color: '#374151', fontSize: 12, fontWeight: '500' }} numberOfLines={1}>{tx.description || tx.category}</Text>
+                                                    <Text style={{ color: '#D1D5DB', fontSize: 9 }}>{formatDateShort(tx.transaction_date)}</Text>
+                                                </View>
+                                                <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '700' }}>−{formatRupiah(tx.amount)}</Text>
+                                                <TouchableOpacity onPress={() => setDeleteTx(tx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 8 }}>
+                                                    <Text style={{ color: '#D1D5DB', fontSize: 9 }}>✕</Text>
+                                                </TouchableOpacity>
+                                            </View>
+                                        ))}
+                                    </View>
+                                )}
                             </View>
-                        </View>
-                    ))
+                        );
+                    })
+                )}
+
+                {/* Unlinked expenses (not tied to any FR) */}
+                {transactions.filter(tx => !tx.fund_request_id).length > 0 && (
+                    <View style={{ marginTop: 8 }}>
+                        <Text style={{ color: '#374151', fontWeight: '700', fontSize: 13, marginBottom: 8 }}>Pengeluaran Lainnya</Text>
+                        {transactions.filter(tx => !tx.fund_request_id).map(tx => (
+                            <View key={tx.id} style={{
+                                backgroundColor: '#fff', borderRadius: 12, padding: 12,
+                                marginBottom: 8, borderWidth: 1, borderColor: '#F3F4F6',
+                                flexDirection: 'row', alignItems: 'center',
+                            }}>
+                                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
+                                    <Text style={{ fontSize: 12, color: '#DC2626' }}>↓</Text>
+                                </View>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ color: '#374151', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{tx.description || tx.category}</Text>
+                                    <Text style={{ color: '#D1D5DB', fontSize: 10 }}>{formatDateShort(tx.transaction_date)}</Text>
+                                </View>
+                                <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '700' }}>−{formatRupiah(tx.amount)}</Text>
+                                <TouchableOpacity onPress={() => setDeleteTx(tx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 8 }}>
+                                    <Text style={{ color: '#D1D5DB', fontSize: 10 }}>✕</Text>
+                                </TouchableOpacity>
+                            </View>
+                        ))}
+                    </View>
                 )}
             </ScrollView>
 
-            {/* FAB — Floating Action Button */}
+            {/* FAB — Pengeluaran (red, left) */}
             <TouchableOpacity
-                onPress={() => {
-                    setItems([{ ...DEFAULT_ITEM }]);
-                    setRequestDate(todayISO());
-                    setFormErrors({});
-                    setShowForm(true);
-                }}
+                onPress={() => { setExpDesc(''); setExpAmount(0); setExpDate(todayISO()); setExpErrors({}); setShowExpenseForm(true); }}
                 activeOpacity={0.85}
                 style={{
-                    position: 'absolute',
-                    bottom: 24,
-                    right: 20,
-                    width: 56,
-                    height: 56,
-                    borderRadius: 28,
-                    backgroundColor: '#1D4ED8',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    elevation: 6,
-                    shadowColor: '#1D4ED8',
-                    shadowOffset: { width: 0, height: 4 },
-                    shadowOpacity: 0.35,
-                    shadowRadius: 8,
+                    position: 'absolute', bottom: 24, left: 20,
+                    width: 56, height: 56, borderRadius: 28,
+                    backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center',
+                    elevation: 6, shadowColor: '#DC2626', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8,
+                }}
+            >
+                <Text style={{ color: '#fff', fontSize: 28, fontWeight: '300', marginTop: -2 }}>−</Text>
+            </TouchableOpacity>
+
+            {/* FAB — Fund Request (blue, right) */}
+            <TouchableOpacity
+                onPress={() => { setItems([{ ...DEFAULT_ITEM }]); setRequestDate(todayISO()); setFormErrors({}); setShowForm(true); }}
+                activeOpacity={0.85}
+                style={{
+                    position: 'absolute', bottom: 24, right: 20,
+                    width: 56, height: 56, borderRadius: 28,
+                    backgroundColor: '#1D4ED8', alignItems: 'center', justifyContent: 'center',
+                    elevation: 6, shadowColor: '#1D4ED8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8,
                 }}
             >
                 <Text style={{ color: '#fff', fontSize: 28, fontWeight: '300', marginTop: -2 }}>+</Text>
@@ -939,6 +1048,91 @@ export default function FundRequestScreen() {
                             onPress={() => setDeleteFR(null)}
                             style={{ paddingVertical: 12, alignItems: 'center' }}
                         >
+                            <Text style={{ color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>Batal</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* ══ Form Pengeluaran ══ */}
+            <Modal visible={showExpenseForm} animationType="slide" presentationStyle="pageSheet">
+                <View style={{ flex: 1, backgroundColor: '#fff' }}>
+                    <View style={{
+                        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
+                        borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                    }}>
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Pengeluaran</Text>
+                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Catat pengeluaran baru</Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => setShowExpenseForm(false)}
+                            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            <Text style={{ fontSize: 16, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
+                        </TouchableOpacity>
+                    </View>
+                    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+                        <FormSection title="Tanggal">
+                            <Input value={expDate} onChangeText={setExpDate} placeholder="YYYY-MM-DD" />
+                        </FormSection>
+                        <FormSection title="Deskripsi">
+                            <Input value={expDesc} onChangeText={setExpDesc} placeholder="Keterangan pengeluaran..." />
+                            {expErrors.description && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{expErrors.description}</Text>}
+                        </FormSection>
+                        <FormSection title="Nominal">
+                            <CurrencyInput value={expAmount} onChangeValue={setExpAmount} />
+                            {expErrors.amount && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{expErrors.amount}</Text>}
+                        </FormSection>
+                        <TouchableOpacity
+                            onPress={handleExpenseSubmit}
+                            disabled={expSubmitting}
+                            style={{
+                                backgroundColor: '#DC2626', borderRadius: 14, paddingVertical: 16,
+                                alignItems: 'center', opacity: expSubmitting ? 0.6 : 1, marginTop: 8,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                {expSubmitting ? 'Memproses...' : 'Simpan Pengeluaran'}
+                            </Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
+            </Modal>
+
+            {/* ══ Delete Transaction Confirmation ══ */}
+            <Modal visible={!!deleteTx} transparent animationType="fade" onRequestClose={() => setDeleteTx(null)}>
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setDeleteTx(null)}
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
+                >
+                    <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 320 }}>
+                        <Text style={{ fontSize: 40, textAlign: 'center', marginBottom: 12 }}>🗑</Text>
+                        <Text style={{ fontSize: 17, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 6 }}>Hapus Pengeluaran?</Text>
+                        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 20 }}>Data tidak bisa dikembalikan.</Text>
+                        <TouchableOpacity
+                            disabled={deletingTx}
+                            onPress={async () => {
+                                if (!deleteTx) return;
+                                setDeletingTx(true);
+                                try {
+                                    await transactionApi.delete(deleteTx.id);
+                                    setDeleteTx(null);
+                                    loadAll();
+                                    showToast('✅', 'Dihapus', 'Pengeluaran berhasil dihapus');
+                                } catch { showToast('❌', 'Gagal', 'Tidak bisa menghapus'); }
+                                finally { setDeletingTx(false); }
+                            }}
+                            style={{
+                                backgroundColor: '#DC2626', borderRadius: 12, paddingVertical: 14,
+                                alignItems: 'center', marginBottom: 10, opacity: deletingTx ? 0.6 : 1,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{deletingTx ? 'Menghapus...' : 'Ya, Hapus'}</Text>
+                        </TouchableOpacity>
+                        <TouchableOpacity onPress={() => setDeleteTx(null)} style={{ paddingVertical: 12, alignItems: 'center' }}>
                             <Text style={{ color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>Batal</Text>
                         </TouchableOpacity>
                     </View>

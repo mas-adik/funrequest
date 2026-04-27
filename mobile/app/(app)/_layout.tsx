@@ -57,9 +57,7 @@ export default function AppLayout() {
                 name="transaksi"
                 options={{
                     title: 'Transaksi',
-                    tabBarIcon: ({ focused }) => (
-                        <TabIcon icon="💰" label="IN-OUT" focused={focused} />
-                    ),
+                    href: null,
                 }}
             />
             <Tabs.Screen
