@@ -114,14 +114,15 @@ function generateHTML(fr: {
     const tableRows = rows.map((row, i) => `
         <tr style="height:28px">
             <td style="border:1px solid #999;text-align:center;font-size:12px;width:6%">${row.item ? i + 1 : ''}</td>
-            <td style="border:1px solid #999;font-size:12px;width:62%">
+            <td style="border:1px solid #999;font-size:12px;width:47%">
                 ${row.item
                     ? row.item
                     : '<span style="color:#ccc;font-size:10px;">................................................................................</span>'}
             </td>
-            <td style="border:1px solid #999;text-align:right;font-size:12px;width:32%;padding-right:8px">
+            <td style="border:1px solid #999;text-align:right;font-size:12px;width:20%;padding-right:8px">
                 ${row.amount > 0 ? row.amount.toLocaleString('id-ID') : ''}
             </td>
+            <td style="border:1px solid #999;text-align:center;font-size:12px;width:27%"></td>
         </tr>`).join('');
 
     return `
@@ -217,8 +218,9 @@ function generateHTML(fr: {
   <thead>
     <tr>
       <th style="width:6%">NO</th>
-      <th style="width:62%;text-align:left;padding-left:10px">ITEM</th>
-      <th style="width:32%">NOMINAL</th>
+      <th style="width:47%;text-align:left;padding-left:10px">ITEM</th>
+      <th style="width:20%">NOMINAL</th>
+      <th style="width:27%">PR NO.</th>
     </tr>
   </thead>
   <tbody>
@@ -229,11 +231,12 @@ function generateHTML(fr: {
 <!-- ═══ JUMLAH ═══ -->
 <table class="item-table" style="border-top:none">
   <tr class="jumlah-row">
-    <td style="width:68%;text-align:right;font-weight:bold;border:1.5px solid #555">Jumlah&nbsp;&nbsp;Rp</td>
-    <td style="width:32%;text-align:right;font-weight:bold;font-size:13px;
-               border:1.5px solid #555;padding-right:10px">
+    <td style="width:53%;text-align:right;font-weight:bold;border:1.5px solid #555">Jumlah&nbsp;&nbsp;Rp</td>
+    <td style="width:20%;text-align:right;font-weight:bold;font-size:13px;
+               border:1.5px solid #555;padding-right:8px">
         ${totalAmount.toLocaleString('id-ID')}
     </td>
+    <td style="width:27%;border:1.5px solid #555"></td>
   </tr>
 </table>
 
