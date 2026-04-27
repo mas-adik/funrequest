@@ -594,32 +594,33 @@ export default function FundRequestScreen() {
                 )}
             </ScrollView>
 
-            {/* FAB — Pengeluaran (red, left) */}
+            {/* Single context-aware FAB */}
+            {/* Saat tidak ada FR Approved aktif → FAB Fund Request (+) */}
+            {/* Saat ada FR Approved aktif → FAB Pengeluaran (−) */}
             <TouchableOpacity
-                onPress={() => { setExpDesc(''); setExpAmount(0); setExpDate(todayISO()); setExpErrors({}); setShowExpenseForm(true); }}
-                activeOpacity={0.85}
-                style={{
-                    position: 'absolute', bottom: 24, left: 20,
-                    width: 56, height: 56, borderRadius: 28,
-                    backgroundColor: '#DC2626', alignItems: 'center', justifyContent: 'center',
-                    elevation: 6, shadowColor: '#DC2626', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8,
+                onPress={() => {
+                    if (saldoAwal > 0) {
+                        // Ada FR Approved → buka form Pengeluaran
+                        setExpDesc(''); setExpAmount(0); setExpDate(todayISO()); setExpErrors({}); setShowExpenseForm(true);
+                    } else {
+                        // Tidak ada FR Approved → buka form Fund Request
+                        setItems([{ ...DEFAULT_ITEM }]); setRequestDate(todayISO()); setFormErrors({}); setShowForm(true);
+                    }
                 }}
-            >
-                <Text style={{ color: '#fff', fontSize: 28, fontWeight: '300', marginTop: -2 }}>−</Text>
-            </TouchableOpacity>
-
-            {/* FAB — Fund Request (blue, right) */}
-            <TouchableOpacity
-                onPress={() => { setItems([{ ...DEFAULT_ITEM }]); setRequestDate(todayISO()); setFormErrors({}); setShowForm(true); }}
                 activeOpacity={0.85}
                 style={{
                     position: 'absolute', bottom: 24, right: 20,
                     width: 56, height: 56, borderRadius: 28,
-                    backgroundColor: '#1D4ED8', alignItems: 'center', justifyContent: 'center',
-                    elevation: 6, shadowColor: '#1D4ED8', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8,
+                    backgroundColor: saldoAwal > 0 ? '#DC2626' : '#1D4ED8',
+                    alignItems: 'center', justifyContent: 'center',
+                    elevation: 6,
+                    shadowColor: saldoAwal > 0 ? '#DC2626' : '#1D4ED8',
+                    shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.35, shadowRadius: 8,
                 }}
             >
-                <Text style={{ color: '#fff', fontSize: 28, fontWeight: '300', marginTop: -2 }}>+</Text>
+                <Text style={{ color: '#fff', fontSize: 28, fontWeight: '300', marginTop: -2 }}>
+                    {saldoAwal > 0 ? '−' : '+'}
+                </Text>
             </TouchableOpacity>
 
             {/* Modal Form Pengajuan */}
