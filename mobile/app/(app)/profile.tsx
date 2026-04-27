@@ -9,6 +9,27 @@ import type { Department } from '@/types';
 
 const DEPT_FALLBACK = ['Sales', 'Quality', 'HRD', 'Produksi'];
 
+// Defined outside component to prevent re-creation on each render (keyboard dismiss bug)
+const Field = ({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, error }: any) => (
+    <View style={{ marginBottom: 18 }}>
+        <Text style={{ fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Text>
+        <TextInput
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            placeholderTextColor="#D1D5DB"
+            secureTextEntry={secureTextEntry}
+            keyboardType={keyboardType}
+            style={{
+                borderWidth: 1.5, borderColor: error ? '#DC2626' : '#E5E7EB',
+                borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+                fontSize: 15, color: '#111827', backgroundColor: '#F9FAFB',
+            }}
+        />
+        {error && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{error}</Text>}
+    </View>
+);
+
 export default function ProfileScreen() {
     const { user, login, logout } = useAuth();
 
@@ -114,26 +135,6 @@ export default function ProfileScreen() {
     };
 
     const initials = (user?.full_name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
-
-    const Field = ({ label, value, onChangeText, placeholder, secureTextEntry, keyboardType, error }: any) => (
-        <View style={{ marginBottom: 18 }}>
-            <Text style={{ fontSize: 12, fontWeight: '600', color: '#6B7280', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>{label}</Text>
-            <TextInput
-                value={value}
-                onChangeText={onChangeText}
-                placeholder={placeholder}
-                placeholderTextColor="#D1D5DB"
-                secureTextEntry={secureTextEntry}
-                keyboardType={keyboardType}
-                style={{
-                    borderWidth: 1.5, borderColor: error ? '#DC2626' : '#E5E7EB',
-                    borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
-                    fontSize: 15, color: '#111827', backgroundColor: '#F9FAFB',
-                }}
-            />
-            {error && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{error}</Text>}
-        </View>
-    );
 
     return (
         <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
