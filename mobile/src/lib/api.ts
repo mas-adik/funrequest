@@ -152,6 +152,10 @@ export const transactionApi = {
         const res = await api.delete<ApiResponse<null>>(`/transactions/${id}`);
         return res.data;
     },
+    update: async (id: number, data: Partial<Pick<Transaction, 'description' | 'category' | 'amount' | 'transaction_date'>>) => {
+        const res = await api.patch<ApiResponse<Transaction>>(`/transactions/${id}`, data);
+        return res.data;
+    },
 };
 
 // ─── Reports API ──────────────────────────────────────────────────────────────

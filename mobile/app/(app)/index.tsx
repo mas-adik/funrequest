@@ -310,6 +310,9 @@ export default function FundRequestScreen() {
     const [deleteTx, setDeleteTx] = useState<Transaction | null>(null);
     const [deletingTx, setDeletingTx] = useState(false);
 
+    // Edit expense
+    const [editTx, setEditTx] = useState<Transaction | null>(null);
+
     // Menu & Approve modal state
     const [menuFR, setMenuFR] = useState<FundRequest | null>(null);
     const [showApprove, setShowApprove] = useState(false);
@@ -367,9 +370,7 @@ export default function FundRequestScreen() {
                 transactionApi.getAll(),
             ]);
             if (frRes.success && frRes.data) {
-                const sorted = [...frRes.data].sort((a, b) =>
-                    new Date(b.request_date).getTime() - new Date(a.request_date).getTime()
-                );
+                const sorted = [...frRes.data].sort((a, b) => b.id - a.id);
                 setHistory(sorted);
             }
             if (balRes.success && balRes.data) setBalance(balRes.data);
@@ -469,8 +470,15 @@ export default function FundRequestScreen() {
         if (Object.keys(errs).length > 0) { setExpErrors(errs); return; }
         setExpSubmitting(true);
         try {
-            const res = await transactionApi.create({ type: 'OUT', category: expDesc.trim(), description: expDesc, amount: expAmount, transaction_date: expDate });
-            if (res.success) { setShowExpenseForm(false); loadAll(); showToast('✅', 'Berhasil', 'Pengeluaran disimpan'); }
+            let res;
+            if (editTx) {
+                // Edit mode
+                res = await transactionApi.update(editTx.id, { description: expDesc.trim(), category: expDesc.trim(), amount: expAmount, transaction_date: expDate });
+            } else {
+                // Create mode
+                res = await transactionApi.create({ type: 'OUT', category: expDesc.trim(), description: expDesc, amount: expAmount, transaction_date: expDate });
+            }
+            if (res.success) { setShowExpenseForm(false); setEditTx(null); loadAll(); showToast('✅', 'Berhasil', editTx ? 'Pengeluaran diperbarui' : 'Pengeluaran disimpan'); }
             else showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan');
         } catch (e: any) { showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi'); }
         finally { setExpSubmitting(false); }
@@ -581,8 +589,24 @@ export default function FundRequestScreen() {
                                                     <Text style={{ color: '#D1D5DB', fontSize: 9 }}>{formatDateShort(tx.transaction_date)}</Text>
                                                 </View>
                                                 <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '700' }}>−{formatRupiah(tx.amount)}</Text>
-                                                {fr.status !== 'CLOSED' && (
-                                                    <TouchableOpacity onPress={() => setDeleteTx(tx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 8 }}>
+                                                {fr.status === 'APPROVED' && (
+                                                    <TouchableOpacity
+                                                        onPress={() => {
+                                                            setEditTx(tx);
+                                                            setExpDesc(tx.description || tx.category);
+                                                            setExpAmount(tx.amount);
+                                                            setExpDate(typeof tx.transaction_date === 'string' ? tx.transaction_date.split('T')[0] : todayISO());
+                                                            setExpErrors({});
+                                                            setShowExpenseForm(true);
+                                                        }}
+                                                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                                        style={{ marginLeft: 6 }}
+                                                    >
+                                                        <Text style={{ color: '#9CA3AF', fontSize: 10 }}>✏️</Text>
+                                                    </TouchableOpacity>
+                                                )}
+                                                {fr.status === 'APPROVED' && (
+                                                    <TouchableOpacity onPress={() => setDeleteTx(tx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 4 }}>
                                                         <Text style={{ color: '#D1D5DB', fontSize: 9 }}>✕</Text>
                                                     </TouchableOpacity>
                                                 )}
@@ -1085,11 +1109,11 @@ export default function FundRequestScreen() {
                         borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
                     }}>
                         <View>
-                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Pengeluaran</Text>
-                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Catat pengeluaran baru</Text>
+                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>{editTx ? 'Edit Pengeluaran' : 'Pengeluaran'}</Text>
+                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{editTx ? 'Perbarui data pengeluaran' : 'Catat pengeluaran baru'}</Text>
                         </View>
                         <TouchableOpacity
-                            onPress={() => setShowExpenseForm(false)}
+                            onPress={() => { setShowExpenseForm(false); setEditTx(null); }}
                             style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
                         >
                             <Text style={{ fontSize: 16, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>

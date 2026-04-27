@@ -93,4 +93,40 @@ transactionsRouter.delete('/:id', async (c) => {
     }
 });
 
+// PATCH /transactions/:id
+const updateTxSchema = z.object({
+    description:      z.string().min(1).optional(),
+    category:         z.string().min(1).optional(),
+    amount:           z.number().positive().optional(),
+    transaction_date: z.string().optional(),
+});
+
+transactionsRouter.patch('/:id', zValidator('json', updateTxSchema), async (c) => {
+    try {
+        const userId = c.get('userId');
+        const id = parseInt(c.req.param('id'));
+        const data = c.req.valid('json');
+
+        const tx = await db.select().from(transactions)
+            .where(and(eq(transactions.id, id), eq(transactions.user_id, userId))).get();
+        if (!tx) return c.json({ success: false, error: 'Transaksi tidak ditemukan' }, 404);
+
+        const updates: any = {};
+        if (data.description !== undefined) updates.description = data.description;
+        if (data.category !== undefined) updates.category = data.category;
+        if (data.amount !== undefined) updates.amount = data.amount;
+        if (data.transaction_date !== undefined) updates.transaction_date = new Date(data.transaction_date);
+
+        await db.update(transactions).set(updates).where(eq(transactions.id, id));
+
+        const updated = await db.select().from(transactions)
+            .where(eq(transactions.id, id)).get();
+
+        return c.json({ success: true, data: updated });
+    } catch (error) {
+        console.error('Update transaction error:', error);
+        return c.json({ success: false, error: 'Gagal update transaksi' }, 500);
+    }
+});
+
 export default transactionsRouter;
