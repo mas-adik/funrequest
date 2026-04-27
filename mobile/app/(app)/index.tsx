@@ -513,9 +513,15 @@ export default function FundRequestScreen() {
                         <Text style={{ color: '#9CA3AF', marginTop: 12 }}>Belum ada pengajuan</Text>
                     </View>
                 ) : (
-                    history.map(fr => {
-                        // Find expenses linked to this FR (or all if no fund_request_id)
-                        const frTx = transactions.filter(tx => tx.fund_request_id === fr.id);
+                    history.map((fr, idx) => {
+                        // Find linked expenses + unlinked expenses go to latest approved FR
+                        const linkedTx = transactions.filter(tx => tx.fund_request_id === fr.id);
+                        // Find unlinked expenses (no fund_request_id)
+                        const unlinkedTx = transactions.filter(tx => !tx.fund_request_id);
+                        // Attach unlinked to the first approved FR, or first FR if none approved
+                        const latestApprovedIdx = history.findIndex(h => h.status === 'APPROVED');
+                        const targetIdx = latestApprovedIdx >= 0 ? latestApprovedIdx : 0;
+                        const frTx = idx === targetIdx ? [...linkedTx, ...unlinkedTx] : linkedTx;
                         return (
                             <View key={fr.id} style={{
                                 backgroundColor: '#fff', borderRadius: 14,
@@ -545,7 +551,7 @@ export default function FundRequestScreen() {
                                     <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 110 }}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                             {statusBadge(fr.status)}
-                                            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} onPress={(e) => { e.stopPropagation(); setMenuFR(fr); }}>
+                                            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} onPress={() => setMenuFR(fr)}>
                                                 <Text style={{ fontSize: 20, color: '#9CA3AF', fontWeight: '800' }}>⋯</Text>
                                             </TouchableOpacity>
                                         </View>
@@ -579,32 +585,6 @@ export default function FundRequestScreen() {
                             </View>
                         );
                     })
-                )}
-
-                {/* Unlinked expenses (not tied to any FR) */}
-                {transactions.filter(tx => !tx.fund_request_id).length > 0 && (
-                    <View style={{ marginTop: 8 }}>
-                        <Text style={{ color: '#374151', fontWeight: '700', fontSize: 13, marginBottom: 8 }}>Pengeluaran Lainnya</Text>
-                        {transactions.filter(tx => !tx.fund_request_id).map(tx => (
-                            <View key={tx.id} style={{
-                                backgroundColor: '#fff', borderRadius: 12, padding: 12,
-                                marginBottom: 8, borderWidth: 1, borderColor: '#F3F4F6',
-                                flexDirection: 'row', alignItems: 'center',
-                            }}>
-                                <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center', marginRight: 10 }}>
-                                    <Text style={{ fontSize: 12, color: '#DC2626' }}>↓</Text>
-                                </View>
-                                <View style={{ flex: 1 }}>
-                                    <Text style={{ color: '#374151', fontSize: 12, fontWeight: '600' }} numberOfLines={1}>{tx.description || tx.category}</Text>
-                                    <Text style={{ color: '#D1D5DB', fontSize: 10 }}>{formatDateShort(tx.transaction_date)}</Text>
-                                </View>
-                                <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '700' }}>−{formatRupiah(tx.amount)}</Text>
-                                <TouchableOpacity onPress={() => setDeleteTx(tx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 8 }}>
-                                    <Text style={{ color: '#D1D5DB', fontSize: 10 }}>✕</Text>
-                                </TouchableOpacity>
-                            </View>
-                        ))}
-                    </View>
                 )}
             </ScrollView>
 
