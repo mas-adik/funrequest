@@ -156,6 +156,41 @@ fundRequestsRouter.post('/:id/approve', async (c) => {
     }
 });
 
+// GET /fund-requests/:id/summary — Get closing summary for a closed FR (for reprint)
+fundRequestsRouter.get('/:id/summary', async (c) => {
+    try {
+        const userId   = c.get('userId');
+        const tenantId = c.get('tenantId');
+        const id = parseInt(c.req.param('id'));
+
+        const fr = await db.select().from(fundRequests)
+            .where(and(eq(fundRequests.id, id), eq(fundRequests.user_id, userId), eq(fundRequests.tenant_id, tenantId)))
+            .get();
+        if (!fr) return c.json({ success: false, error: 'Fund request tidak ditemukan' }, 404);
+
+        const relatedTx = await db.select().from(transactions)
+            .where(and(eq(transactions.fund_request_id, id), eq(transactions.tenant_id, tenantId)))
+            .all();
+        const totalExpense = relatedTx.filter(tx => tx.type === 'OUT').reduce((s, tx) => s + tx.amount, 0);
+
+        return c.json({
+            success: true,
+            data: {
+                fund_request: fr,
+                summary: {
+                    total_budget: fr.amount,
+                    total_expense: totalExpense,
+                    remaining_balance: fr.amount - totalExpense,
+                },
+                transactions: relatedTx,
+            },
+        });
+    } catch (error: any) {
+        console.error('Get summary error:', error?.message || error);
+        return c.json({ success: false, error: 'Gagal mengambil summary' }, 500);
+    }
+});
+
 // POST /fund-requests/:id/close — Close (Tutup) fund request & return summary
 fundRequestsRouter.post('/:id/close', async (c) => {
     try {

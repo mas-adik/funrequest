@@ -453,6 +453,81 @@ export default function FundRequestScreen() {
         }
     };
 
+    const printClosingSummary = async (fr: FundRequest) => {
+        try {
+            const res = await fundRequestApi.getSummary(fr.id);
+            if (!res.success || !res.data) { showToast('❌', 'Gagal', 'Data summary tidak ditemukan'); return; }
+            const { summary, transactions: txList } = res.data;
+            const outTxs = (txList || []).filter((tx: any) => tx.type === 'OUT');
+            const closingDate = outTxs.length > 0
+                ? formatDate(outTxs.reduce((latest: any, tx: any) => tx.transaction_date > latest ? tx.transaction_date : latest, outTxs[0].transaction_date))
+                : new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+            const requestDateFormatted = formatDate(fr.request_date);
+            const qrData = encodeURIComponent(`Dibuat oleh: ${fr.full_name}\nDepartemen: ${fr.department}\nFR #${fr.id}\nPeriode: ${requestDateFormatted} - ${closingDate}`);
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
+            const closingHTML = `
+<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
+<style>
+  body { font-family: Arial, sans-serif; margin: 40px; color: #111; font-size: 13px; }
+  h1 { text-align: center; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+  .period { text-align: center; color: #555; margin-bottom: 24px; }
+  .summary-box { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #DBEAFE; font-size: 13px; }
+  .summary-row:last-child { border-bottom: none; font-weight: bold; font-size: 15px; }
+  .remaining { color: ${summary.remaining_balance >= 0 ? '#059669' : '#DC2626'}; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { background: #F3F4F6; text-align: left; padding: 8px 10px; font-size: 12px; }
+  td { padding: 8px 10px; border-bottom: 1px solid #E5E7EB; }
+  h3 { margin-top: 24px; margin-bottom: 8px; color: #374151; font-size: 14px; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 11px; color: #888; text-align: center; }
+  .sign-area { display: flex; justify-content: flex-start; margin-top: 48px; }
+  .sign-box { text-align: center; width: 240px; }
+  .sign-box img { width: 120px; height: 120px; margin-bottom: 8px; }
+  .sign-label { font-size: 12px; color: #555; margin-top: 6px; }
+  .sign-name { font-size: 13px; font-weight: bold; margin-top: 2px; }
+  .copy-badge { text-align: center; color: #9CA3AF; font-size: 10px; margin-top: 4px; letter-spacing: 1px; }
+</style></head><body>
+<h1>📊 Closing Summary - Fund Request</h1>
+<div class="copy-badge">— COPY —</div>
+<div class="period">
+  FR #${fr.id} — ${fr.description}<br/>
+  Periode: ${requestDateFormatted} – ${closingDate}
+</div>
+<div class="summary-box">
+  <div class="summary-row"><span>Dana Fund Request</span><span>${formatRupiah(summary.total_budget)}</span></div>
+  <div class="summary-row"><span>− Total Pengeluaran</span><span style="color:#DC2626">${formatRupiah(summary.total_expense)}</span></div>
+  <div class="summary-row"><span>= Sisa yang Dikembalikan</span><span class="remaining">${formatRupiah(summary.remaining_balance)}</span></div>
+</div>
+${outTxs.length > 0 ? `
+  <h3>💸 Rincian Pengeluaran</h3>
+  <table>
+    <thead><tr><th>Tanggal</th><th>Keterangan</th><th style="text-align:right">Nominal</th></tr></thead>
+    <tbody>${outTxs.map((tx: any) => `
+      <tr>
+        <td>${formatDate(tx.transaction_date)}</td>
+        <td>${tx.description || tx.category}</td>
+        <td style="text-align:right;color:#DC2626">− ${formatRupiah(tx.amount)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>` : ''}
+<div class="sign-area">
+  <div class="sign-box">
+    <img src="${qrUrl}" alt="QR Code" />
+    <div class="sign-label">Dibuat oleh</div>
+    <div class="sign-name">${fr.full_name}</div>
+  </div>
+</div>
+<div class="footer">Laporan ini dibuat otomatis melalui Aplikasi FundRequest &copy; ${new Date().getFullYear()}</div>
+</body></html>`;
+            const { uri } = await Print.printToFileAsync({ html: closingHTML, base64: false });
+            if (await Sharing.isAvailableAsync()) {
+                await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Closing Summary FR (Copy)' });
+            }
+        } catch (e) {
+            showToast('❌', 'Gagal', 'Tidak bisa mencetak summary');
+        }
+    };
+
     const saldoAwal = balance?.initial_balance || 0;
     const totalOut = balance?.total_expense || 0;
     const sisaBudget = saldoAwal - totalOut;
@@ -883,7 +958,7 @@ export default function FundRequestScreen() {
                             </TouchableOpacity>
                         )}
 
-                        {/* Cetak PDF — only when not PENDING */}
+                        {/* Cetak FR PDF — only when not PENDING */}
                         {menuFR?.status !== 'PENDING' && (
                             <TouchableOpacity
                                 onPress={() => { if (menuFR) printFundRequest(menuFR); setMenuFR(null); }}
@@ -893,7 +968,23 @@ export default function FundRequestScreen() {
                                 }}
                             >
                                 <Text style={{ fontSize: 18, marginRight: 14 }}>🖨</Text>
-                                <Text style={{ fontSize: 15, color: '#374151', fontWeight: '600' }}>Cetak PDF</Text>
+                                <Text style={{ fontSize: 15, color: '#374151', fontWeight: '600' }}>
+                                    {menuFR?.status === 'CLOSED' ? 'Cetak FR (Copy)' : 'Cetak PDF'}
+                                </Text>
+                            </TouchableOpacity>
+                        )}
+
+                        {/* Cetak Closing Summary — only CLOSED */}
+                        {menuFR?.status === 'CLOSED' && (
+                            <TouchableOpacity
+                                onPress={() => { if (menuFR) printClosingSummary(menuFR); setMenuFR(null); }}
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+                                    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                                }}
+                            >
+                                <Text style={{ fontSize: 18, marginRight: 14 }}>📊</Text>
+                                <Text style={{ fontSize: 15, color: '#1D4ED8', fontWeight: '600' }}>Cetak CS (Copy)</Text>
                             </TouchableOpacity>
                         )}
 

@@ -144,6 +144,10 @@ export const fundRequestApi = {
         const res = await api.post<ApiResponse<any>>(`/fund-requests/${id}/close`);
         return res.data;
     },
+    getSummary: async (id: number) => {
+        const res = await api.get<ApiResponse<any>>(`/fund-requests/${id}/summary`);
+        return res.data;
+    },
 };
 
 // ─── Transactions API ─────────────────────────────────────────────────────────
