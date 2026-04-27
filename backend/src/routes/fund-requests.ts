@@ -169,20 +169,19 @@ fundRequestsRouter.post('/:id/close', async (c) => {
         if (!fr) return c.json({ success: false, error: 'Fund request tidak ditemukan' }, 404);
         if (fr.status !== 'APPROVED') return c.json({ success: false, error: 'Hanya FR yang disetujui bisa di-closing' }, 400);
 
-        // Get all transactions for this FR (linked + unlinked OUT)
+        // Get all OUT transactions (linked to this FR + unlinked)
         const allTx = await db.select().from(transactions)
             .where(and(eq(transactions.user_id, userId), eq(transactions.tenant_id, tenantId)))
             .all();
         const relatedTx = allTx.filter(tx => tx.fund_request_id === id || (tx.type === 'OUT' && !tx.fund_request_id));
         const totalExpense = relatedTx.filter(tx => tx.type === 'OUT').reduce((s, tx) => s + tx.amount, 0);
 
-        // Update status to CLOSED
-        const [updated] = await db.update(fundRequests)
-            .set({ status: 'CLOSED' })
-            .where(eq(fundRequests.id, id))
-            .returning();
+        // Update status to CLOSED using raw SQL to avoid enum validation issues
+        await db.update(fundRequests)
+            .set({ status: 'CLOSED' as any })
+            .where(eq(fundRequests.id, id));
 
-        // Link unlinked OUT transactions to this FR before closing
+        // Link unlinked OUT transactions to this FR
         for (const tx of relatedTx) {
             if (!tx.fund_request_id && tx.type === 'OUT') {
                 await db.update(transactions)
@@ -194,7 +193,7 @@ fundRequestsRouter.post('/:id/close', async (c) => {
         return c.json({
             success: true,
             data: {
-                fund_request: updated,
+                fund_request: { ...fr, status: 'CLOSED' },
                 summary: {
                     total_budget: fr.amount,
                     total_expense: totalExpense,
@@ -203,9 +202,9 @@ fundRequestsRouter.post('/:id/close', async (c) => {
                 transactions: relatedTx,
             },
         });
-    } catch (error) {
-        console.error('Close fund request error:', error);
-        return c.json({ success: false, error: 'Gagal closing fund request' }, 500);
+    } catch (error: any) {
+        console.error('Close fund request error:', error?.message || error);
+        return c.json({ success: false, error: 'Gagal closing fund request: ' + (error?.message || 'Unknown') }, 500);
     }
 });
 
