@@ -13,6 +13,7 @@ import { ItemCard } from '@/components/ItemCard';
 import { useAuth } from '@/hooks/useAuth';
 import { fundRequestApi, transactionApi, reportApi } from '@/lib/api';
 import type { FundRequest, FRItem, Transaction, BalanceSummary } from '@/types';
+import { MSJ_LOGO_BASE64 } from '@/lib/logo-base64';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
@@ -113,13 +114,12 @@ function generateHTML(fr: {
     const tableRows = rows.map((row, i) => `
         <tr style="height:28px">
             <td style="border:1px solid #999;text-align:center;font-size:12px;width:6%">${row.item ? i + 1 : ''}</td>
-            <td style="border:1px solid #999;font-size:12px;width:55%">
+            <td style="border:1px solid #999;font-size:12px;width:62%">
                 ${row.item
                     ? row.item
                     : '<span style="color:#ccc;font-size:10px;">................................................................................</span>'}
             </td>
-            <td style="border:1px solid #999;text-align:center;font-size:12px;width:12%">${row.qty || ''}</td>
-            <td style="border:1px solid #999;text-align:right;font-size:12px;width:27%;padding-right:8px">
+            <td style="border:1px solid #999;text-align:right;font-size:12px;width:32%;padding-right:8px">
                 ${row.amount > 0 ? row.amount.toLocaleString('id-ID') : ''}
             </td>
         </tr>`).join('');
@@ -139,10 +139,7 @@ function generateHTML(fr: {
     .page-header { display: flex; align-items: flex-start; border: 1.5px solid #555;
                    border-bottom: none; padding: 8px 12px; }
     .logo-area { width: 110px; min-height: 48px; display: flex; align-items: center; }
-    .logo-placeholder { width: 80px; height: 48px; border: 1px dashed #aaa;
-                        display: flex; align-items: center; justify-content: center;
-                        font-size: 9px; color: #aaa; text-align: center;
-                        border-radius: 3px; }
+    .logo-area img { width: 100px; height: auto; object-fit: contain; }
     .title-area { flex: 1; text-align: center; }
     .doc-title { font-size: 18px; font-weight: bold; letter-spacing: 3px;
                  text-transform: uppercase; margin-top: 6px; }
@@ -187,7 +184,7 @@ function generateHTML(fr: {
 <!-- ═══ HEADER: Logo + Judul ═══ -->
 <div class="page-header">
   <div class="logo-area">
-    <div class="logo-placeholder">LOGO<br/>PERUSAHAAN</div>
+    <img src="data:image/png;base64,${MSJ_LOGO_BASE64}" />
   </div>
   <div class="title-area">
     <div class="doc-title">Fund Request</div>
@@ -220,9 +217,8 @@ function generateHTML(fr: {
   <thead>
     <tr>
       <th style="width:6%">NO</th>
-      <th style="width:55%;text-align:left;padding-left:10px">ITEM</th>
-      <th style="width:12%">QTY</th>
-      <th style="width:27%">PR NO.</th>
+      <th style="width:62%;text-align:left;padding-left:10px">ITEM</th>
+      <th style="width:32%">NOMINAL</th>
     </tr>
   </thead>
   <tbody>
@@ -233,9 +229,8 @@ function generateHTML(fr: {
 <!-- ═══ JUMLAH ═══ -->
 <table class="item-table" style="border-top:none">
   <tr class="jumlah-row">
-    <td style="width:61%;text-align:right;font-weight:bold;border:1.5px solid #555">Jumlah</td>
-    <td style="width:12%;text-align:center;border:1.5px solid #555">Rp</td>
-    <td style="width:27%;text-align:right;font-weight:bold;font-size:13px;
+    <td style="width:68%;text-align:right;font-weight:bold;border:1.5px solid #555">Jumlah&nbsp;&nbsp;Rp</td>
+    <td style="width:32%;text-align:right;font-weight:bold;font-size:13px;
                border:1.5px solid #555;padding-right:10px">
         ${totalAmount.toLocaleString('id-ID')}
     </td>
