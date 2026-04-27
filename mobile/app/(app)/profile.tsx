@@ -31,13 +31,45 @@ export default function ProfileScreen() {
     const [changingPass, setChangingPass]   = useState(false);
     const [passErrors, setPassErrors]       = useState<Record<string, string>>({});
 
+    // Users in tenant
+    const [allUsers, setAllUsers] = useState<any[]>([]);
+
     useEffect(() => {
         departmentsApi.getAll().then(res => {
             if (res.success && res.data && res.data.length > 0) {
                 setDepts(res.data.map((d: Department) => d.name));
             }
         }).catch(() => {});
+
+        // Load users
+        loadUsers();
+
+        // Heartbeat every 60s
+        userApi.heartbeat().catch(() => {});
+        const heartbeatInterval = setInterval(() => {
+            userApi.heartbeat().catch(() => {});
+        }, 60000);
+
+        // Refresh users every 30s
+        const usersInterval = setInterval(loadUsers, 30000);
+
+        return () => {
+            clearInterval(heartbeatInterval);
+            clearInterval(usersInterval);
+        };
     }, []);
+
+    const loadUsers = () => {
+        userApi.getAll().then(res => {
+            if (res.success && res.data) setAllUsers(res.data);
+        }).catch(() => {});
+    };
+
+    const isOnline = (lastActive: string | null) => {
+        if (!lastActive) return false;
+        const diff = Date.now() - new Date(lastActive).getTime();
+        return diff < 5 * 60 * 1000; // 5 minutes
+    };
 
     const handleSaveProfile = async () => {
         setSaving(true);
@@ -219,6 +251,97 @@ export default function ProfileScreen() {
                             <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#DC2626' }}>Keluar</Text>
                             <Text style={{ fontSize: 16, color: '#D1D5DB' }}>›</Text>
                         </TouchableOpacity>
+                    </View>
+                </View>
+
+                {/* ── Users Section ── */}
+                <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+                    <View style={{
+                        backgroundColor: '#fff', borderRadius: 16, padding: 16,
+                        elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.06, shadowRadius: 8,
+                    }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 14 }}>
+                            <Text style={{ fontSize: 16, marginRight: 8 }}>👥</Text>
+                            <Text style={{ fontSize: 14, fontWeight: '700', color: '#374151', flex: 1 }}>Tim</Text>
+                            <View style={{
+                                backgroundColor: '#EFF6FF', paddingHorizontal: 10, paddingVertical: 3, borderRadius: 10,
+                            }}>
+                                <Text style={{ fontSize: 11, fontWeight: '700', color: '#1D4ED8' }}>
+                                    {allUsers.length} user
+                                </Text>
+                            </View>
+                        </View>
+
+                        {allUsers.map((u, idx) => {
+                            const online = isOnline(u.last_active);
+                            const uInitials = (u.full_name || 'U').split(' ').map((w: string) => w[0]).join('').toUpperCase().slice(0, 2);
+                            const isMe = u.id === user?.id;
+                            return (
+                                <View key={u.id} style={{
+                                    flexDirection: 'row', alignItems: 'center', paddingVertical: 12,
+                                    borderTopWidth: idx > 0 ? 1 : 0, borderTopColor: '#F3F4F6',
+                                }}>
+                                    {/* Avatar with status dot */}
+                                    <View style={{ marginRight: 12 }}>
+                                        <View style={{
+                                            width: 40, height: 40, borderRadius: 20,
+                                            backgroundColor: isMe ? '#1D4ED8' : '#E5E7EB',
+                                            alignItems: 'center', justifyContent: 'center',
+                                        }}>
+                                            <Text style={{ fontSize: 13, fontWeight: '700', color: isMe ? '#fff' : '#6B7280' }}>
+                                                {uInitials}
+                                            </Text>
+                                        </View>
+                                        {/* Online dot */}
+                                        <View style={{
+                                            position: 'absolute', bottom: 0, right: 0,
+                                            width: 12, height: 12, borderRadius: 6,
+                                            backgroundColor: online ? '#22C55E' : '#D1D5DB',
+                                            borderWidth: 2, borderColor: '#fff',
+                                        }} />
+                                    </View>
+
+                                    {/* Info */}
+                                    <View style={{ flex: 1 }}>
+                                        <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                                            <Text style={{ fontSize: 13, fontWeight: '600', color: '#1F2937' }} numberOfLines={1}>
+                                                {u.full_name}
+                                            </Text>
+                                            {u.role === 'ADMIN' && (
+                                                <Text style={{ fontSize: 9, marginLeft: 6 }}>👑</Text>
+                                            )}
+                                            {isMe && (
+                                                <View style={{
+                                                    marginLeft: 6, backgroundColor: '#EFF6FF',
+                                                    paddingHorizontal: 6, paddingVertical: 1, borderRadius: 6,
+                                                }}>
+                                                    <Text style={{ fontSize: 8, color: '#1D4ED8', fontWeight: '700' }}>Anda</Text>
+                                                </View>
+                                            )}
+                                        </View>
+                                        <Text style={{ fontSize: 11, color: '#9CA3AF', marginTop: 1 }} numberOfLines={1}>
+                                            {u.email}
+                                        </Text>
+                                    </View>
+
+                                    {/* Department badge */}
+                                    {u.department && (
+                                        <View style={{
+                                            backgroundColor: '#F3F4F6', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8,
+                                        }}>
+                                            <Text style={{ fontSize: 10, color: '#6B7280', fontWeight: '600' }}>{u.department}</Text>
+                                        </View>
+                                    )}
+                                </View>
+                            );
+                        })}
+
+                        {allUsers.length === 0 && (
+                            <Text style={{ textAlign: 'center', color: '#D1D5DB', fontSize: 12, paddingVertical: 16 }}>
+                                Belum ada user terdaftar
+                            </Text>
+                        )}
                     </View>
                 </View>
 

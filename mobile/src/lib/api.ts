@@ -84,6 +84,14 @@ export const userApi = {
         const res = await api.put<ApiResponse<null>>('/users/me/password', data);
         return res.data;
     },
+    getAll: async () => {
+        const res = await api.get<ApiResponse<any[]>>('/users/all');
+        return res.data;
+    },
+    heartbeat: async () => {
+        const res = await api.post<ApiResponse<null>>('/users/heartbeat');
+        return res.data;
+    },
 };
 
 // ─── Departments API ──────────────────────────────────────────────────────────

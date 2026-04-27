@@ -38,6 +38,7 @@ export const users = sqliteTable('users', {
     role: text('role', { enum: ['ADMIN', 'STAFF'] }).notNull().default('STAFF'),
     reset_token: text('reset_token'),
     reset_token_expires: integer('reset_token_expires', { mode: 'timestamp' }),
+    last_active: integer('last_active', { mode: 'timestamp' }),
     created_at: integer('created_at', { mode: 'timestamp' })
         .notNull()
         .default(sql`(unixepoch())`),

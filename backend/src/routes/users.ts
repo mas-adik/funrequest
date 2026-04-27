@@ -70,4 +70,37 @@ usersRouter.put('/me/password', zValidator('json', z.object({
     }
 });
 
+// GET /users/all — List all users in the same tenant
+usersRouter.get('/all', async (c) => {
+    try {
+        const tenantId = c.get('tenantId');
+        const allUsers = await db.select({
+            id: users.id,
+            email: users.email,
+            full_name: users.full_name,
+            department: users.department,
+            role: users.role,
+            last_active: users.last_active,
+        }).from(users).where(eq(users.tenant_id, tenantId)).all();
+
+        return c.json({ success: true, data: allUsers });
+    } catch (error) {
+        console.error('Get all users error:', error);
+        return c.json({ success: false, error: 'Gagal mengambil daftar user' }, 500);
+    }
+});
+
+// POST /users/heartbeat — Update last_active timestamp
+usersRouter.post('/heartbeat', async (c) => {
+    try {
+        const userId = c.get('userId');
+        await db.update(users)
+            .set({ last_active: new Date() })
+            .where(eq(users.id, userId));
+        return c.json({ success: true });
+    } catch (error) {
+        return c.json({ success: false }, 500);
+    }
+});
+
 export default usersRouter;
