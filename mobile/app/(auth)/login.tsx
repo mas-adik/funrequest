@@ -1,12 +1,10 @@
 import React, { useState } from 'react';
 import {
     View, Text, ScrollView, KeyboardAvoidingView,
-    Platform, Alert, TouchableOpacity,
+    Platform, Alert, TouchableOpacity, TextInput,
 } from 'react-native';
 import { Link } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Input } from '@/components/Input';
-import { Button } from '@/components/Button';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
@@ -41,57 +39,93 @@ export default function LoginScreen() {
     };
 
     return (
-        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} className="flex-1">
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
             <StatusBar style="dark" />
             <ScrollView contentContainerStyle={{ flexGrow: 1 }} keyboardShouldPersistTaps="handled">
-                <View className="flex-1 bg-white px-6 justify-center py-10">
+                <View style={{ flex: 1, backgroundColor: '#fff', paddingHorizontal: 28, justifyContent: 'center', paddingVertical: 40 }}>
 
-                    {/* Header */}
-                    <View className="mb-10">
-                        <Text style={{ fontSize: 36, fontWeight: '800', color: '#111827', marginBottom: 4 }}>
-                            FundRequest
-                        </Text>
-                        <Text style={{ color: '#6B7280', fontSize: 15 }}>
-                            Masuk ke akun Anda
-                        </Text>
+                    {/* Logo & Title */}
+                    <View style={{ alignItems: 'center', marginBottom: 40 }}>
+                        <View style={{
+                            width: 64, height: 64, borderRadius: 18, backgroundColor: '#1D4ED8',
+                            alignItems: 'center', justifyContent: 'center', marginBottom: 16,
+                        }}>
+                            <Text style={{ fontSize: 28, color: '#fff', fontWeight: '800' }}>FR</Text>
+                        </View>
+                        <Text style={{ fontSize: 24, fontWeight: '800', color: '#111827' }}>Selamat Datang</Text>
+                        <Text style={{ fontSize: 14, color: '#9CA3AF', marginTop: 4 }}>Masuk ke akun Anda</Text>
                     </View>
 
-                    {/* Form */}
-                    <View>
-                        <Input
-                            label="Email"
-                            placeholder="nama@perusahaan.com"
+                    {/* Email */}
+                    <View style={{ marginBottom: 16 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 }}>Email</Text>
+                        <TextInput
                             value={email}
                             onChangeText={setEmail}
+                            placeholder="nama@perusahaan.com"
+                            placeholderTextColor="#D1D5DB"
                             keyboardType="email-address"
                             autoCapitalize="none"
-                            error={errors.email}
+                            style={{
+                                borderWidth: 1.5, borderColor: errors.email ? '#DC2626' : '#E5E7EB',
+                                borderRadius: 12, paddingHorizontal: 16, paddingVertical: 14,
+                                fontSize: 15, color: '#111827', backgroundColor: '#F9FAFB',
+                            }}
                         />
-                        <Input
-                            label="Password"
-                            placeholder="Masukkan password"
-                            value={password}
-                            onChangeText={setPassword}
-                            secureTextEntry={!showPass}
-                            error={errors.password}
-                            rightElement={
-                                <TouchableOpacity onPress={() => setShowPass(!showPass)}>
-                                    <Text style={{ color: '#2563EB', fontSize: 13 }}>{showPass ? 'Sembunyikan' : 'Tampilkan'}</Text>
-                                </TouchableOpacity>
-                            }
-                        />
-
-                        <Button variant="primary" size="lg" onPress={handleLogin} loading={loading} className="w-full mt-2">
-                            Masuk
-                        </Button>
+                        {errors.email && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{errors.email}</Text>}
                     </View>
 
+                    {/* Password */}
+                    <View style={{ marginBottom: 24 }}>
+                        <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 }}>Password</Text>
+                        <View style={{
+                            flexDirection: 'row', alignItems: 'center',
+                            borderWidth: 1.5, borderColor: errors.password ? '#DC2626' : '#E5E7EB',
+                            borderRadius: 12, backgroundColor: '#F9FAFB',
+                        }}>
+                            <TextInput
+                                value={password}
+                                onChangeText={setPassword}
+                                placeholder="Masukkan password"
+                                placeholderTextColor="#D1D5DB"
+                                secureTextEntry={!showPass}
+                                style={{
+                                    flex: 1, paddingHorizontal: 16, paddingVertical: 14,
+                                    fontSize: 15, color: '#111827',
+                                }}
+                            />
+                            <TouchableOpacity onPress={() => setShowPass(!showPass)} style={{ paddingRight: 16 }}>
+                                <Text style={{ color: '#1D4ED8', fontSize: 12, fontWeight: '600' }}>
+                                    {showPass ? 'Sembunyikan' : 'Tampilkan'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
+                        {errors.password && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{errors.password}</Text>}
+                    </View>
+
+                    {/* Submit */}
+                    <TouchableOpacity
+                        onPress={handleLogin}
+                        disabled={loading}
+                        activeOpacity={0.85}
+                        style={{
+                            backgroundColor: '#1D4ED8', borderRadius: 14, paddingVertical: 16,
+                            alignItems: 'center', opacity: loading ? 0.6 : 1,
+                            elevation: 3, shadowColor: '#1D4ED8', shadowOffset: { width: 0, height: 4 },
+                            shadowOpacity: 0.25, shadowRadius: 8,
+                        }}
+                    >
+                        <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700' }}>
+                            {loading ? 'Memproses...' : 'Masuk'}
+                        </Text>
+                    </TouchableOpacity>
+
                     {/* Register Link */}
-                    <View className="items-center mt-6">
-                        <Text className="text-gray-500">
+                    <View style={{ alignItems: 'center', marginTop: 24 }}>
+                        <Text style={{ color: '#9CA3AF', fontSize: 14 }}>
                             Belum punya akun?{' '}
-                            <Link href="/(auth)/register" className="text-primary-600 font-semibold">
-                                Daftar Sekarang
+                            <Link href="/(auth)/register" style={{ color: '#1D4ED8', fontWeight: '700' }}>
+                                Daftar
                             </Link>
                         </Text>
                     </View>
