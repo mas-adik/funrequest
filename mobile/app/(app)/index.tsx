@@ -781,97 +781,50 @@ export default function FundRequestScreen() {
             </Modal>
 
             {/* Modal Edit Fund Request */}
-            <Modal visible={showEdit} animationType="slide" presentationStyle="pageSheet">
-                <View style={{ flex: 1, backgroundColor: '#fff' }}>
-                    {/* Fixed Header */}
-                    <View style={{
-                        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-                        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
-                        borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-                    }}>
-                        <View>
-                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Edit Request</Text>
-                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Ubah detail pengajuan</Text>
+            <Modal visible={showEdit} transparent animationType="fade" onRequestClose={() => setShowEdit(false)}>
+                <TouchableOpacity activeOpacity={1} onPress={() => setShowEdit(false)}
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }}>
+                    <View style={{ backgroundColor: '#fff', borderRadius: 24 }}
+                        onStartShouldSetResponder={() => true}>
+                        {/* Header */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 24, paddingBottom: 12 }}>
+                            <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>Edit Request</Text>
+                            <TouchableOpacity onPress={() => setShowEdit(false)}
+                                style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ fontSize: 14, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                            onPress={() => setShowEdit(false)}
-                            style={{
-                                width: 32, height: 32, borderRadius: 16,
-                                backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center',
-                            }}
-                        >
-                            <Text style={{ fontSize: 16, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
-                        </TouchableOpacity>
+                        <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
+                            <FormSection title="Tanggal">
+                                <Input value={editDate} onChangeText={setEditDate} placeholder="YYYY-MM-DD" />
+                            </FormSection>
+                            <FormSection title="Deskripsi">
+                                <Input value={editDesc} onChangeText={setEditDesc} placeholder="Keterangan fund request" />
+                            </FormSection>
+                            <FormSection title="Nominal">
+                                <CurrencyInput value={editAmount} onChangeValue={setEditAmount} />
+                            </FormSection>
+                            <TouchableOpacity
+                                disabled={editSaving}
+                                onPress={async () => {
+                                    if (!editFR) return;
+                                    setEditSaving(true);
+                                    try {
+                                        const res = await fundRequestApi.update(editFR.id, {
+                                            description: editDesc, amount: editAmount, request_date: editDate,
+                                        });
+                                        if (res.success) { setShowEdit(false); loadHistory(); showToast('✅', 'Berhasil', 'Fund request diperbarui'); }
+                                        else { showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan'); }
+                                    } catch (e: any) { showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi'); }
+                                    finally { setEditSaving(false); }
+                                }}
+                                style={{ backgroundColor: '#1D4ED8', borderRadius: 14, paddingVertical: 15, alignItems: 'center', opacity: editSaving ? 0.6 : 1 }}
+                            >
+                                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{editSaving ? 'Menyimpan...' : 'Simpan'}</Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-
-                    <ScrollView
-                        contentContainerStyle={{ padding: 20, paddingBottom: 40 }}
-                        keyboardShouldPersistTaps="handled"
-                    >
-                        <FormSection title="Tanggal">
-                            <Input
-                                value={editDate}
-                                onChangeText={setEditDate}
-                                placeholder="YYYY-MM-DD"
-                            />
-                        </FormSection>
-                        <FormSection title="Deskripsi">
-                            <Input
-                                value={editDesc}
-                                onChangeText={setEditDesc}
-                                placeholder="Keterangan fund request"
-                            />
-                        </FormSection>
-                        <FormSection title="Nominal">
-                            <CurrencyInput
-                                value={editAmount}
-                                onChangeValue={setEditAmount}
-                            />
-                        </FormSection>
-
-                        <TouchableOpacity
-                            disabled={editSaving}
-                            onPress={async () => {
-                                if (!editFR) return;
-                                setEditSaving(true);
-                                try {
-                                    const res = await fundRequestApi.update(editFR.id, {
-                                        description: editDesc,
-                                        amount: editAmount,
-                                        request_date: editDate,
-                                    });
-                                    if (res.success) {
-                                        setShowEdit(false);
-                                        loadHistory();
-                                        showToast('✅', 'Berhasil', 'Fund request diperbarui');
-                                    } else {
-                                        showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan');
-                                    }
-                                } catch (e: any) {
-                                    showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi');
-                                } finally { setEditSaving(false); }
-                            }}
-                            style={{
-                                backgroundColor: '#1D4ED8', borderRadius: 14, paddingVertical: 16,
-                                alignItems: 'center', marginBottom: 10, opacity: editSaving ? 0.6 : 1,
-                            }}
-                        >
-                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
-                                {editSaving ? 'Menyimpan...' : 'Simpan Perubahan'}
-                            </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                            onPress={() => setShowEdit(false)}
-                            style={{
-                                borderWidth: 1.5, borderColor: '#E5E7EB', borderRadius: 14,
-                                paddingVertical: 14, alignItems: 'center',
-                            }}
-                        >
-                            <Text style={{ color: '#6B7280', fontSize: 14, fontWeight: '600' }}>Batal</Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
+                </TouchableOpacity>
             </Modal>
 
             {/* ══ Bottom Sheet: Opsi Menu ══ */}
@@ -1101,50 +1054,43 @@ export default function FundRequestScreen() {
             </Modal>
 
             {/* ══ Form Pengeluaran ══ */}
-            <Modal visible={showExpenseForm} animationType="slide" presentationStyle="pageSheet">
-                <View style={{ flex: 1, backgroundColor: '#fff' }}>
-                    <View style={{
-                        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
-                        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
-                        borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
-                    }}>
-                        <View>
-                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>{editTx ? 'Edit Pengeluaran' : 'Pengeluaran'}</Text>
-                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>{editTx ? 'Perbarui data pengeluaran' : 'Catat pengeluaran baru'}</Text>
+            <Modal visible={showExpenseForm} transparent animationType="fade" onRequestClose={() => { setShowExpenseForm(false); setEditTx(null); }}>
+                <TouchableOpacity activeOpacity={1} onPress={() => { setShowExpenseForm(false); setEditTx(null); }}
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'center', padding: 24 }}>
+                    <View style={{ backgroundColor: '#fff', borderRadius: 24 }}
+                        onStartShouldSetResponder={() => true}>
+                        {/* Header */}
+                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 24, paddingTop: 24, paddingBottom: 12 }}>
+                            <Text style={{ fontSize: 18, fontWeight: '800', color: '#111827' }}>{editTx ? 'Edit Pengeluaran' : 'Pengeluaran'}</Text>
+                            <TouchableOpacity onPress={() => { setShowExpenseForm(false); setEditTx(null); }}
+                                style={{ width: 30, height: 30, borderRadius: 15, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}>
+                                <Text style={{ fontSize: 14, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
+                            </TouchableOpacity>
                         </View>
-                        <TouchableOpacity
-                            onPress={() => { setShowExpenseForm(false); setEditTx(null); }}
-                            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
-                        >
-                            <Text style={{ fontSize: 16, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
-                        </TouchableOpacity>
+                        <View style={{ paddingHorizontal: 24, paddingBottom: 24 }}>
+                            <FormSection title="Tanggal">
+                                <Input value={expDate} onChangeText={setExpDate} placeholder="YYYY-MM-DD" />
+                            </FormSection>
+                            <FormSection title="Deskripsi">
+                                <Input value={expDesc} onChangeText={setExpDesc} placeholder="Keterangan pengeluaran..." />
+                                {expErrors.description && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{expErrors.description}</Text>}
+                            </FormSection>
+                            <FormSection title="Nominal">
+                                <CurrencyInput value={expAmount} onChangeValue={setExpAmount} />
+                                {expErrors.amount && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{expErrors.amount}</Text>}
+                            </FormSection>
+                            <TouchableOpacity
+                                onPress={handleExpenseSubmit}
+                                disabled={expSubmitting}
+                                style={{ backgroundColor: '#DC2626', borderRadius: 14, paddingVertical: 15, alignItems: 'center', opacity: expSubmitting ? 0.6 : 1 }}
+                            >
+                                <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                    {expSubmitting ? 'Memproses...' : editTx ? 'Simpan' : 'Simpan Pengeluaran'}
+                                </Text>
+                            </TouchableOpacity>
+                        </View>
                     </View>
-                    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
-                        <FormSection title="Tanggal">
-                            <Input value={expDate} onChangeText={setExpDate} placeholder="YYYY-MM-DD" />
-                        </FormSection>
-                        <FormSection title="Deskripsi">
-                            <Input value={expDesc} onChangeText={setExpDesc} placeholder="Keterangan pengeluaran..." />
-                            {expErrors.description && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{expErrors.description}</Text>}
-                        </FormSection>
-                        <FormSection title="Nominal">
-                            <CurrencyInput value={expAmount} onChangeValue={setExpAmount} />
-                            {expErrors.amount && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{expErrors.amount}</Text>}
-                        </FormSection>
-                        <TouchableOpacity
-                            onPress={handleExpenseSubmit}
-                            disabled={expSubmitting}
-                            style={{
-                                backgroundColor: '#DC2626', borderRadius: 14, paddingVertical: 16,
-                                alignItems: 'center', opacity: expSubmitting ? 0.6 : 1, marginTop: 8,
-                            }}
-                        >
-                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
-                                {expSubmitting ? 'Memproses...' : 'Simpan Pengeluaran'}
-                            </Text>
-                        </TouchableOpacity>
-                    </ScrollView>
-                </View>
+                </TouchableOpacity>
             </Modal>
 
             {/* ══ Delete Transaction Confirmation ══ */}
