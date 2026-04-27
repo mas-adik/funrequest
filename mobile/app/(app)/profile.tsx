@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import {
-    View, Text, ScrollView, Alert, TouchableOpacity, Modal, ActivityIndicator,
+    View, Text, ScrollView, Alert, TouchableOpacity, Modal,
 } from 'react-native';
 import { StatusBar } from 'expo-status-bar';
 import { Input } from '@/components/Input';
@@ -10,15 +10,6 @@ import { userApi, departmentsApi } from '@/lib/api';
 import type { Department } from '@/types';
 
 const DEPT_FALLBACK = ['Sales', 'Quality', 'HRD', 'Produksi'];
-
-function InfoRow({ label, value }: { label: string; value: string | null | undefined }) {
-    return (
-        <View className="flex-row justify-between py-3 border-b border-gray-100">
-            <Text className="text-gray-500 text-sm">{label}</Text>
-            <Text className="text-gray-800 font-semibold text-sm">{value || '—'}</Text>
-        </View>
-    );
-}
 
 export default function ProfileScreen() {
     const { user, login, logout } = useAuth();
@@ -53,7 +44,6 @@ export default function ProfileScreen() {
         try {
             const res = await userApi.updateMe({ full_name: fullName, department, phone });
             if (res.success && res.data) {
-                // Update local user state (re-use login to refresh user data)
                 const token = await import('expo-secure-store').then(ss => ss.getItemAsync('auth_token'));
                 if (token) await login(token, res.data as any);
                 setShowEdit(false);
@@ -96,120 +86,254 @@ export default function ProfileScreen() {
         ]);
     };
 
-    return (
-        <View className="flex-1 bg-surface">
-            <StatusBar style="light" />
-            <ScrollView className="flex-1" contentContainerStyle={{ padding: 16, paddingBottom: 40 }}>
+    const initials = (user?.full_name || 'U').split(' ').map(w => w[0]).join('').toUpperCase().slice(0, 2);
 
-                {/* Avatar Card */}
-                <View className="bg-primary-600 rounded-3xl p-6 mb-4 items-center">
-                    <View className="w-20 h-20 bg-white rounded-full items-center justify-center mb-3">
-                        <Text style={{ fontSize: 40 }}>
-                            {user?.role === 'ADMIN' ? '👑' : '👤'}
-                        </Text>
+    return (
+        <View style={{ flex: 1, backgroundColor: '#F9FAFB' }}>
+            <StatusBar style="light" />
+            <ScrollView contentContainerStyle={{ paddingBottom: 40 }}>
+
+                {/* ── Header Card ── */}
+                <View style={{
+                    backgroundColor: '#1D4ED8', paddingTop: 40, paddingBottom: 32,
+                    borderBottomLeftRadius: 32, borderBottomRightRadius: 32,
+                    alignItems: 'center',
+                }}>
+                    {/* Avatar */}
+                    <View style={{
+                        width: 80, height: 80, borderRadius: 40,
+                        backgroundColor: 'rgba(255,255,255,0.2)',
+                        alignItems: 'center', justifyContent: 'center',
+                        borderWidth: 3, borderColor: 'rgba(255,255,255,0.4)',
+                    }}>
+                        <Text style={{ fontSize: 28, fontWeight: '800', color: '#fff' }}>{initials}</Text>
                     </View>
-                    <Text className="text-white text-xl font-bold">{user?.full_name}</Text>
-                    <Text className="text-white opacity-80 text-sm mt-0.5">{user?.email}</Text>
-                    <View className="mt-2 px-3 py-1 bg-white bg-opacity-20 rounded-full">
-                        <Text className="text-white text-xs font-semibold">
+
+                    <Text style={{ color: '#fff', fontSize: 20, fontWeight: '800', marginTop: 12 }}>
+                        {user?.full_name}
+                    </Text>
+                    <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2 }}>
+                        {user?.email}
+                    </Text>
+
+                    {/* Role Badge */}
+                    <View style={{
+                        marginTop: 10, paddingHorizontal: 14, paddingVertical: 5,
+                        backgroundColor: 'rgba(255,255,255,0.15)', borderRadius: 20,
+                    }}>
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700', letterSpacing: 0.5 }}>
                             {user?.role === 'ADMIN' ? '👑 Administrator' : '👤 Staff'}
                         </Text>
                     </View>
                 </View>
 
-                {/* Info Card */}
-                <View className="bg-white rounded-2xl px-5 py-2 mb-4 shadow-sm border border-gray-100">
-                    <Text className="text-gray-700 font-bold text-sm pt-3 pb-1">Informasi Profil</Text>
-                    <InfoRow label="Nama Lengkap" value={user?.full_name} />
-                    <InfoRow label="Email" value={user?.email} />
-                    <InfoRow label="Departemen" value={user?.department} />
-                    <InfoRow label="No. Telepon" value={user?.phone} />
-                    <InfoRow label="Role" value={user?.role === 'ADMIN' ? 'Administrator' : 'Staff'} />
+                {/* ── Info Section ── */}
+                <View style={{ paddingHorizontal: 16, marginTop: -16 }}>
+                    <View style={{
+                        backgroundColor: '#fff', borderRadius: 16, padding: 20,
+                        elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.06, shadowRadius: 8,
+                    }}>
+                        {/* Info Rows */}
+                        {[
+                            { icon: '👤', label: 'Nama Lengkap', value: user?.full_name },
+                            { icon: '✉️', label: 'Email', value: user?.email },
+                            { icon: '🏢', label: 'Departemen', value: user?.department },
+                            { icon: '📱', label: 'No. Telepon', value: user?.phone },
+                        ].map((item, idx) => (
+                            <View key={idx} style={{
+                                flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+                                borderBottomWidth: idx < 3 ? 1 : 0, borderBottomColor: '#F3F4F6',
+                            }}>
+                                <Text style={{ fontSize: 16, marginRight: 12 }}>{item.icon}</Text>
+                                <View style={{ flex: 1 }}>
+                                    <Text style={{ fontSize: 10, color: '#9CA3AF', fontWeight: '600', textTransform: 'uppercase', letterSpacing: 0.5 }}>
+                                        {item.label}
+                                    </Text>
+                                    <Text style={{ fontSize: 14, color: '#1F2937', fontWeight: '600', marginTop: 2 }}>
+                                        {item.value || '—'}
+                                    </Text>
+                                </View>
+                            </View>
+                        ))}
+                    </View>
                 </View>
 
-                {/* Aksi Profil */}
-                <View className="gap-3">
-                    <Button
-                        variant="outline"
-                        size="md"
-                        onPress={() => { setFullName(user?.full_name || ''); setDept(user?.department || ''); setPhone(user?.phone || ''); setShowEdit(true); }}
-                        className="w-full"
-                    >
-                        ✏️ Edit Profil
-                    </Button>
-                    <Button
-                        variant="outline"
-                        size="md"
-                        onPress={() => setShowChangePass(true)}
-                        className="w-full"
-                    >
-                        🔒 Ganti Password
-                    </Button>
-                    <Button variant="danger" size="md" onPress={handleLogout} className="w-full">
-                        🚪 Keluar
-                    </Button>
+                {/* ── Menu Section ── */}
+                <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+                    <View style={{
+                        backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden',
+                        elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.06, shadowRadius: 8,
+                    }}>
+                        {/* Edit Profil */}
+                        <TouchableOpacity
+                            onPress={() => { setFullName(user?.full_name || ''); setDept(user?.department || ''); setPhone(user?.phone || ''); setShowEdit(true); }}
+                            activeOpacity={0.7}
+                            style={{
+                                flexDirection: 'row', alignItems: 'center', padding: 16,
+                                borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                            }}
+                        >
+                            <View style={{
+                                width: 36, height: 36, borderRadius: 10, marginRight: 14,
+                                backgroundColor: '#EFF6FF', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Text style={{ fontSize: 16 }}>✏️</Text>
+                            </View>
+                            <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#374151' }}>Edit Profil</Text>
+                            <Text style={{ fontSize: 16, color: '#D1D5DB' }}>›</Text>
+                        </TouchableOpacity>
+
+                        {/* Ganti Password */}
+                        <TouchableOpacity
+                            onPress={() => setShowChangePass(true)}
+                            activeOpacity={0.7}
+                            style={{
+                                flexDirection: 'row', alignItems: 'center', padding: 16,
+                                borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                            }}
+                        >
+                            <View style={{
+                                width: 36, height: 36, borderRadius: 10, marginRight: 14,
+                                backgroundColor: '#FEF3C7', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Text style={{ fontSize: 16 }}>🔒</Text>
+                            </View>
+                            <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#374151' }}>Ganti Password</Text>
+                            <Text style={{ fontSize: 16, color: '#D1D5DB' }}>›</Text>
+                        </TouchableOpacity>
+
+                        {/* Keluar */}
+                        <TouchableOpacity
+                            onPress={handleLogout}
+                            activeOpacity={0.7}
+                            style={{ flexDirection: 'row', alignItems: 'center', padding: 16 }}
+                        >
+                            <View style={{
+                                width: 36, height: 36, borderRadius: 10, marginRight: 14,
+                                backgroundColor: '#FEE2E2', alignItems: 'center', justifyContent: 'center',
+                            }}>
+                                <Text style={{ fontSize: 16 }}>🚪</Text>
+                            </View>
+                            <Text style={{ flex: 1, fontSize: 14, fontWeight: '600', color: '#DC2626' }}>Keluar</Text>
+                            <Text style={{ fontSize: 16, color: '#D1D5DB' }}>›</Text>
+                        </TouchableOpacity>
+                    </View>
                 </View>
 
-                {/* Versi */}
-                <Text className="text-center text-gray-400 text-xs mt-6">FundRequest v1.0.0</Text>
+                {/* Version */}
+                <Text style={{ textAlign: 'center', color: '#D1D5DB', fontSize: 11, marginTop: 24 }}>
+                    FundRequest v1.0.0
+                </Text>
 
             </ScrollView>
 
-            {/* Modal Edit Profil */}
+            {/* ══ Modal Edit Profil ══ */}
             <Modal visible={showEdit} animationType="slide" presentationStyle="pageSheet">
-                <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 24, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
-                    <View className="flex-row justify-between items-center mb-6">
-                        <Text className="text-2xl font-bold text-gray-900">Edit Profil</Text>
-                        <TouchableOpacity onPress={() => setShowEdit(false)}>
-                            <Text className="text-gray-400 text-2xl">✕</Text>
+                <View style={{ flex: 1, backgroundColor: '#fff' }}>
+                    {/* Header */}
+                    <View style={{
+                        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
+                        borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                    }}>
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Edit Profil</Text>
+                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Perbarui data profil Anda</Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => setShowEdit(false)}
+                            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            <Text style={{ fontSize: 16, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
                         </TouchableOpacity>
                     </View>
 
-                    <Input label="Nama Lengkap" value={fullName} onChangeText={setFullName} placeholder="Nama lengkap Anda" />
-                    <Input label="No. Telepon" value={phone} onChangeText={setPhone} placeholder="08xx-xxxx-xxxx" keyboardType="phone-pad" />
+                    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+                        <Input label="Nama Lengkap" value={fullName} onChangeText={setFullName} placeholder="Nama lengkap Anda" />
+                        <Input label="No. Telepon" value={phone} onChangeText={setPhone} placeholder="08xx-xxxx-xxxx" keyboardType="phone-pad" />
 
-                    {/* Pilih Departemen */}
-                    <View className="mb-4">
-                        <Text className="text-gray-700 font-semibold text-sm mb-1.5">Departemen</Text>
-                        <View className="flex-row flex-wrap gap-2">
-                            {depts.map(d => (
-                                <TouchableOpacity
-                                    key={d}
-                                    onPress={() => setDept(d)}
-                                    className={`px-4 py-2 rounded-xl border ${department === d ? 'bg-primary-600 border-primary-600' : 'bg-white border-gray-200'}`}
-                                >
-                                    <Text className={`text-sm font-semibold ${department === d ? 'text-white' : 'text-gray-600'}`}>{d}</Text>
-                                </TouchableOpacity>
-                            ))}
+                        {/* Pilih Departemen */}
+                        <View style={{ marginBottom: 16 }}>
+                            <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 8 }}>Departemen</Text>
+                            <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                                {depts.map(d => (
+                                    <TouchableOpacity
+                                        key={d}
+                                        onPress={() => setDept(d)}
+                                        style={{
+                                            paddingHorizontal: 16, paddingVertical: 10, borderRadius: 12,
+                                            borderWidth: 1.5,
+                                            backgroundColor: department === d ? '#1D4ED8' : '#fff',
+                                            borderColor: department === d ? '#1D4ED8' : '#E5E7EB',
+                                        }}
+                                    >
+                                        <Text style={{
+                                            fontSize: 13, fontWeight: '600',
+                                            color: department === d ? '#fff' : '#6B7280',
+                                        }}>{d}</Text>
+                                    </TouchableOpacity>
+                                ))}
+                            </View>
                         </View>
-                    </View>
 
-                    <Button variant="primary" size="lg" onPress={handleSaveProfile} loading={saving} className="w-full mt-2">
-                        Simpan Perubahan
-                    </Button>
-                    <Button variant="ghost" size="md" onPress={() => setShowEdit(false)} className="w-full mt-2">Batal</Button>
-                </ScrollView>
+                        <TouchableOpacity
+                            onPress={handleSaveProfile}
+                            disabled={saving}
+                            style={{
+                                backgroundColor: '#1D4ED8', borderRadius: 14, paddingVertical: 16,
+                                alignItems: 'center', marginTop: 8, opacity: saving ? 0.6 : 1,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                {saving ? 'Menyimpan...' : 'Simpan Perubahan'}
+                            </Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
             </Modal>
 
-            {/* Modal Ganti Password */}
+            {/* ══ Modal Ganti Password ══ */}
             <Modal visible={showChangePass} animationType="slide" presentationStyle="pageSheet">
-                <ScrollView className="flex-1 bg-white" contentContainerStyle={{ padding: 24, paddingBottom: 48 }} keyboardShouldPersistTaps="handled">
-                    <View className="flex-row justify-between items-center mb-6">
-                        <Text className="text-2xl font-bold text-gray-900">Ganti Password</Text>
-                        <TouchableOpacity onPress={() => setShowChangePass(false)}>
-                            <Text className="text-gray-400 text-2xl">✕</Text>
+                <View style={{ flex: 1, backgroundColor: '#fff' }}>
+                    {/* Header */}
+                    <View style={{
+                        flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center',
+                        paddingHorizontal: 20, paddingTop: 20, paddingBottom: 16,
+                        borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                    }}>
+                        <View>
+                            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111827' }}>Ganti Password</Text>
+                            <Text style={{ fontSize: 12, color: '#9CA3AF', marginTop: 2 }}>Perbarui password Anda</Text>
+                        </View>
+                        <TouchableOpacity
+                            onPress={() => setShowChangePass(false)}
+                            style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F3F4F6', alignItems: 'center', justifyContent: 'center' }}
+                        >
+                            <Text style={{ fontSize: 16, color: '#9CA3AF', fontWeight: '600' }}>✕</Text>
                         </TouchableOpacity>
                     </View>
 
-                    <Input label="Password Saat Ini" value={currentPass} onChangeText={setCurrentPass} secureTextEntry placeholder="Masukkan password sekarang" error={passErrors.currentPass} />
-                    <Input label="Password Baru" value={newPass} onChangeText={setNewPass} secureTextEntry placeholder="Minimal 6 karakter" error={passErrors.newPass} />
-                    <Input label="Konfirmasi Password Baru" value={confirmPass} onChangeText={setConfirmPass} secureTextEntry placeholder="Ulangi password baru" error={passErrors.confirmPass} />
+                    <ScrollView contentContainerStyle={{ padding: 20, paddingBottom: 40 }} keyboardShouldPersistTaps="handled">
+                        <Input label="Password Saat Ini" value={currentPass} onChangeText={setCurrentPass} secureTextEntry placeholder="Masukkan password sekarang" error={passErrors.currentPass} />
+                        <Input label="Password Baru" value={newPass} onChangeText={setNewPass} secureTextEntry placeholder="Minimal 6 karakter" error={passErrors.newPass} />
+                        <Input label="Konfirmasi Password" value={confirmPass} onChangeText={setConfirmPass} secureTextEntry placeholder="Ulangi password baru" error={passErrors.confirmPass} />
 
-                    <Button variant="primary" size="lg" onPress={handleChangePassword} loading={changingPass} className="w-full mt-2">
-                        Ganti Password
-                    </Button>
-                    <Button variant="ghost" size="md" onPress={() => setShowChangePass(false)} className="w-full mt-2">Batal</Button>
-                </ScrollView>
+                        <TouchableOpacity
+                            onPress={handleChangePassword}
+                            disabled={changingPass}
+                            style={{
+                                backgroundColor: '#1D4ED8', borderRadius: 14, paddingVertical: 16,
+                                alignItems: 'center', marginTop: 8, opacity: changingPass ? 0.6 : 1,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                {changingPass ? 'Memproses...' : 'Ganti Password'}
+                            </Text>
+                        </TouchableOpacity>
+                    </ScrollView>
+                </View>
             </Modal>
         </View>
     );
