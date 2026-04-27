@@ -509,7 +509,7 @@ export default function FundRequestScreen() {
   td { padding: 8px 10px; border-bottom: 1px solid #E5E7EB; }
   h3 { margin-top: 24px; margin-bottom: 8px; color: #374151; font-size: 14px; }
   .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 11px; color: #888; text-align: center; }
-  .sign-area { display: flex; justify-content: flex-start; margin-top: 48px; }
+  .sign-area { display: flex; justify-content: flex-end; margin-top: 48px; }
   .sign-box { text-align: center; width: 240px; }
   .sign-box img { width: 120px; height: 120px; margin-bottom: 8px; }
   .sign-label { font-size: 12px; color: #555; margin-top: 6px; }
@@ -1296,7 +1296,7 @@ ${outTxs.length > 0 ? `
   td { padding: 8px 10px; border-bottom: 1px solid #E5E7EB; }
   h3 { margin-top: 24px; margin-bottom: 8px; color: #374151; font-size: 14px; }
   .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 11px; color: #888; text-align: center; }
-  .sign-area { display: flex; justify-content: flex-start; margin-top: 48px; }
+  .sign-area { display: flex; justify-content: flex-end; margin-top: 48px; }
   .sign-box { text-align: center; width: 240px; }
   .sign-box img { width: 120px; height: 120px; margin-bottom: 8px; }
   .sign-label { font-size: 12px; color: #555; margin-top: 6px; }
