@@ -1157,6 +1157,10 @@ export default function FundRequestScreen() {
                                     if (res.success && res.data) {
                                         const { summary, transactions: txList } = res.data;
                                         const outTxs = (txList || []).filter((tx: any) => tx.type === 'OUT');
+                                        const closingDate = new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
+                                        const requestDateFormatted = formatDate(closingFR.request_date);
+                                        const qrData = encodeURIComponent(`Dibuat oleh: ${closingFR.full_name}\nDepartemen: ${closingFR.department}\nFR #${closingFR.id}\nPeriode: ${requestDateFormatted} - ${closingDate}`);
+                                        const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
                                         const closingHTML = `
 <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
 <style>
@@ -1172,14 +1176,16 @@ export default function FundRequestScreen() {
   td { padding: 8px 10px; border-bottom: 1px solid #E5E7EB; }
   h3 { margin-top: 24px; margin-bottom: 8px; color: #374151; font-size: 14px; }
   .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 11px; color: #888; text-align: center; }
-  .sign-area { display: flex; justify-content: space-between; margin-top: 48px; }
-  .sign-box { text-align: center; width: 200px; }
-  .sign-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 6px; font-size: 12px; }
+  .sign-area { display: flex; justify-content: center; margin-top: 48px; }
+  .sign-box { text-align: center; width: 240px; }
+  .sign-box img { width: 120px; height: 120px; margin-bottom: 8px; }
+  .sign-label { font-size: 12px; color: #555; margin-top: 6px; }
+  .sign-name { font-size: 13px; font-weight: bold; margin-top: 2px; }
 </style></head><body>
 <h1>📊 Closing Summary - Fund Request</h1>
 <div class="period">
   FR #${closingFR.id} — ${closingFR.description}<br/>
-  Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}
+  Periode: ${requestDateFormatted} – ${closingDate}
 </div>
 <div class="summary-box">
   <div class="summary-row"><span>Dana Fund Request</span><span>${formatRupiah(summary.total_budget)}</span></div>
@@ -1199,9 +1205,11 @@ ${outTxs.length > 0 ? `
     </tbody>
   </table>` : ''}
 <div class="sign-area">
-  <div class="sign-box"><div class="sign-line">Dibuat oleh<br/><strong>${closingFR.full_name}</strong></div></div>
-  <div class="sign-box"><div class="sign-line">Diperiksa oleh<br/><strong>Atasan Langsung</strong></div></div>
-  <div class="sign-box"><div class="sign-line">Disetujui oleh<br/><strong>Admin / Finance</strong></div></div>
+  <div class="sign-box">
+    <img src="${qrUrl}" alt="QR Code" />
+    <div class="sign-label">Dibuat oleh</div>
+    <div class="sign-name">${closingFR.full_name}</div>
+  </div>
 </div>
 <div class="footer">Laporan ini dibuat otomatis melalui Aplikasi FundRequest &copy; ${new Date().getFullYear()}</div>
 </body></html>`;
