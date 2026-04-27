@@ -289,6 +289,10 @@ export default function FundRequestScreen() {
     const [refreshing, setRefreshing] = useState(false);
     const [showForm, setShowForm] = useState(false);
 
+    // Expand/collapse sub-transactions
+    const [expandedFR, setExpandedFR] = useState<Record<number, boolean>>({});
+    const toggleExpand = (id: number) => setExpandedFR(prev => ({ ...prev, [id]: !prev[id] }));
+
     // Balance + Transactions (merged from IN-OUT)
     const [balance, setBalance] = useState<BalanceSummary | null>(null);
     const [transactions, setTransactions] = useState<Transaction[]>([]);
@@ -518,24 +522,39 @@ export default function FundRequestScreen() {
                                 marginBottom: 10, borderWidth: 1, borderColor: '#F3F4F6', overflow: 'hidden',
                             }}>
                                 {/* FR Card Row */}
-                                <View style={{ padding: 14, flexDirection: 'row' }}>
+                                <TouchableOpacity
+                                    activeOpacity={0.7}
+                                    onPress={() => { if (frTx.length > 0) toggleExpand(fr.id); }}
+                                    style={{ padding: 14, flexDirection: 'row' }}
+                                >
                                     <View style={{ flex: 1, marginRight: 12 }}>
                                         <Text style={{ color: '#9CA3AF', fontSize: 11, marginBottom: 3 }}>{formatDate(fr.request_date)}</Text>
                                         <Text style={{ color: '#374151', fontSize: 13 }} numberOfLines={2}>{fr.description}</Text>
+                                        {/* Expense count badge */}
+                                        {frTx.length > 0 && (
+                                            <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6, gap: 4 }}>
+                                                <Text style={{ fontSize: 10, color: expandedFR[fr.id] ? '#1D4ED8' : '#9CA3AF' }}>
+                                                    {expandedFR[fr.id] ? '▼' : '▶'}
+                                                </Text>
+                                                <Text style={{ fontSize: 10, color: '#9CA3AF' }}>
+                                                    {frTx.length} pengeluaran
+                                                </Text>
+                                            </View>
+                                        )}
                                     </View>
                                     <View style={{ alignItems: 'flex-end', justifyContent: 'space-between', minWidth: 110 }}>
                                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
                                             {statusBadge(fr.status)}
-                                            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} onPress={() => setMenuFR(fr)}>
+                                            <TouchableOpacity hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }} onPress={(e) => { e.stopPropagation(); setMenuFR(fr); }}>
                                                 <Text style={{ fontSize: 20, color: '#9CA3AF', fontWeight: '800' }}>⋯</Text>
                                             </TouchableOpacity>
                                         </View>
                                         <Text style={{ fontWeight: '700', color: '#1F2937', fontSize: 14, marginTop: 4 }}>{formatRupiah(fr.amount)}</Text>
                                     </View>
-                                </View>
+                                </TouchableOpacity>
 
-                                {/* Sub: Transaction list for this FR */}
-                                {frTx.length > 0 && (
+                                {/* Sub: Transaction list — collapsible */}
+                                {expandedFR[fr.id] && frTx.length > 0 && (
                                     <View style={{ borderTopWidth: 1, borderTopColor: '#F3F4F6', paddingHorizontal: 14, paddingVertical: 8, backgroundColor: '#FAFAFA' }}>
                                         {frTx.map(tx => (
                                             <View key={tx.id} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6 }}>
