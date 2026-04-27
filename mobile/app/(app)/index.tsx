@@ -329,6 +329,7 @@ export default function FundRequestScreen() {
     // Closing state
     const [showClosing, setShowClosing] = useState(false);
     const [closing, setClosing] = useState(false);
+    const [closingFR, setClosingFR] = useState<FundRequest | null>(null);
 
     // Edit state
     const [showEdit, setShowEdit] = useState(false);
@@ -921,7 +922,7 @@ export default function FundRequestScreen() {
                         {/* Closing — only APPROVED */}
                         {menuFR?.status === 'APPROVED' && (
                             <TouchableOpacity
-                                onPress={() => { setShowClosing(true); }}
+                                onPress={() => { setClosingFR(menuFR); setMenuFR(null); setTimeout(() => setShowClosing(true), 300); }}
                                 style={{
                                     flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
                                     borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
@@ -1158,31 +1159,32 @@ export default function FundRequestScreen() {
             </Modal>
 
             {/* ══ Closing Confirmation Modal ══ */}
-            <Modal visible={showClosing} transparent animationType="fade" onRequestClose={() => setShowClosing(false)}>
+            <Modal visible={showClosing} transparent animationType="fade" onRequestClose={() => { setShowClosing(false); setClosingFR(null); }}>
                 <TouchableOpacity
                     activeOpacity={1}
-                    onPress={() => setShowClosing(false)}
+                    onPress={() => { setShowClosing(false); setClosingFR(null); }}
                     style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
                 >
-                    <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340 }}>
+                    <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340 }}
+                        onStartShouldSetResponder={() => true}
+                    >
                         <Text style={{ fontSize: 40, textAlign: 'center', marginBottom: 12 }}>📊</Text>
                         <Text style={{ fontSize: 17, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 6 }}>
                             Closing Fund Request?
                         </Text>
                         <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
-                            Menutup siklus FR #{menuFR?.id}{"\n"}Summary transaksi akan dicetak sebagai PDF dan sisa budget akan di-reset.
+                            Menutup siklus FR #{closingFR?.id}{"\n"}Summary transaksi akan dicetak sebagai PDF dan sisa budget akan di-reset.
                         </Text>
 
                         <TouchableOpacity
                             disabled={closing}
                             onPress={async () => {
-                                if (!menuFR) return;
+                                if (!closingFR) return;
                                 setClosing(true);
                                 try {
-                                    const res = await fundRequestApi.close(menuFR.id);
+                                    const res = await fundRequestApi.close(closingFR.id);
                                     if (res.success && res.data) {
-                                        const { fund_request, summary, transactions: txList } = res.data;
-                                        // Generate closing summary PDF
+                                        const { summary, transactions: txList } = res.data;
                                         const outTxs = (txList || []).filter((tx: any) => tx.type === 'OUT');
                                         const closingHTML = `
 <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
@@ -1205,7 +1207,7 @@ export default function FundRequestScreen() {
 </style></head><body>
 <h1>📊 Closing Summary - Fund Request</h1>
 <div class="period">
-  FR #${menuFR.id} — ${menuFR.description}<br/>
+  FR #${closingFR.id} — ${closingFR.description}<br/>
   Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}
 </div>
 <div class="summary-box">
@@ -1226,7 +1228,7 @@ ${outTxs.length > 0 ? `
     </tbody>
   </table>` : ''}
 <div class="sign-area">
-  <div class="sign-box"><div class="sign-line">Dibuat oleh<br/><strong>${menuFR.full_name}</strong></div></div>
+  <div class="sign-box"><div class="sign-line">Dibuat oleh<br/><strong>${closingFR.full_name}</strong></div></div>
   <div class="sign-box"><div class="sign-line">Diperiksa oleh<br/><strong>Atasan Langsung</strong></div></div>
   <div class="sign-box"><div class="sign-line">Disetujui oleh<br/><strong>Admin / Finance</strong></div></div>
 </div>
@@ -1240,7 +1242,7 @@ ${outTxs.length > 0 ? `
                                         } catch {}
 
                                         setShowClosing(false);
-                                        setMenuFR(null);
+                                        setClosingFR(null);
                                         loadAll();
                                         showToast('✅', 'Berhasil', 'Fund Request di-closing & summary dicetak');
                                     } else {
@@ -1261,7 +1263,7 @@ ${outTxs.length > 0 ? `
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                            onPress={() => setShowClosing(false)}
+                            onPress={() => { setShowClosing(false); setClosingFR(null); }}
                             style={{ paddingVertical: 12, alignItems: 'center' }}
                         >
                             <Text style={{ color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>Batal</Text>
