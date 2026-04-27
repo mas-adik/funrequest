@@ -63,13 +63,13 @@ reportsRouter.get('/summary', async (c) => {
     }
 });
 
-// GET /reports/balance — saldo dari SEMUA fund request yang APPROVED
+// GET /reports/balance — saldo dari SEMUA fund request yang APPROVED (bukan CLOSED)
 reportsRouter.get('/balance', async (c) => {
     try {
         const userId   = c.get('userId');
         const tenantId = c.get('tenantId');
 
-        // Get all approved fund requests
+        // Get only APPROVED fund requests (not CLOSED)
         const approvedFRs = await db.select().from(fundRequests)
             .where(and(
                 eq(fundRequests.user_id, userId),
@@ -78,15 +78,21 @@ reportsRouter.get('/balance', async (c) => {
             ))
             .all();
 
+        const approvedFRIds = approvedFRs.map(fr => fr.id);
         const initialBalance = approvedFRs.reduce((sum, fr) => sum + fr.amount, 0);
 
-        // Get all transactions for this user
-        const txs = await db.select().from(transactions)
+        // Get all transactions, but only count those linked to APPROVED FRs or unlinked
+        const allTxs = await db.select().from(transactions)
             .where(and(eq(transactions.user_id, userId), eq(transactions.tenant_id, tenantId)))
             .all();
 
-        const totalIn  = txs.filter(tx => tx.type === 'IN').reduce((s, tx) => s + tx.amount, 0);
-        const totalOut = txs.filter(tx => tx.type === 'OUT').reduce((s, tx) => s + tx.amount, 0);
+        // Filter: only transactions linked to an approved FR, or with no FR link
+        const activeTxs = allTxs.filter(tx =>
+            !tx.fund_request_id || approvedFRIds.includes(tx.fund_request_id)
+        );
+
+        const totalIn  = activeTxs.filter(tx => tx.type === 'IN').reduce((s, tx) => s + tx.amount, 0);
+        const totalOut = activeTxs.filter(tx => tx.type === 'OUT').reduce((s, tx) => s + tx.amount, 0);
         const remaining = initialBalance + totalIn - totalOut;
 
         return c.json({
