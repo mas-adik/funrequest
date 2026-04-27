@@ -581,9 +581,11 @@ export default function FundRequestScreen() {
                                                     <Text style={{ color: '#D1D5DB', fontSize: 9 }}>{formatDateShort(tx.transaction_date)}</Text>
                                                 </View>
                                                 <Text style={{ color: '#DC2626', fontSize: 12, fontWeight: '700' }}>−{formatRupiah(tx.amount)}</Text>
-                                                <TouchableOpacity onPress={() => setDeleteTx(tx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 8 }}>
-                                                    <Text style={{ color: '#D1D5DB', fontSize: 9 }}>✕</Text>
-                                                </TouchableOpacity>
+                                                {fr.status !== 'CLOSED' && (
+                                                    <TouchableOpacity onPress={() => setDeleteTx(tx)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }} style={{ marginLeft: 8 }}>
+                                                        <Text style={{ color: '#D1D5DB', fontSize: 9 }}>✕</Text>
+                                                    </TouchableOpacity>
+                                                )}
                                             </View>
                                         ))}
                                     </View>
