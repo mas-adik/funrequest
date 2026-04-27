@@ -455,16 +455,45 @@ export default function FundRequestScreen() {
 
     const printClosingSummary = async (fr: FundRequest) => {
         try {
-            const res = await fundRequestApi.getSummary(fr.id);
-            if (!res.success || !res.data) { showToast('❌', 'Gagal', 'Data summary tidak ditemukan'); return; }
-            const { summary, transactions: txList } = res.data;
-            const outTxs = (txList || []).filter((tx: any) => tx.type === 'OUT');
+            // Try dedicated endpoint first, fallback to manual calculation
+            let summary: any;
+            let outTxs: any[] = [];
+
+            try {
+                const res = await fundRequestApi.getSummary(fr.id);
+                if (res.success && res.data) {
+                    summary = res.data.summary;
+                    outTxs = (res.data.transactions || []).filter((tx: any) => tx.type === 'OUT');
+                }
+            } catch (_) {
+                // Endpoint not available yet — fallback
+            }
+
+            // Fallback: calculate from transaction list
+            if (!summary) {
+                try {
+                    const txRes = await transactionApi.getAll({ fund_request_id: fr.id });
+                    if (txRes.success && txRes.data) {
+                        outTxs = (txRes.data as any[]).filter((tx: any) => tx.type === 'OUT');
+                        const totalExpense = outTxs.reduce((s: number, tx: any) => s + tx.amount, 0);
+                        summary = {
+                            total_budget: fr.amount,
+                            total_expense: totalExpense,
+                            remaining_balance: fr.amount - totalExpense,
+                        };
+                    }
+                } catch (_) {}
+            }
+
+            if (!summary) { showToast('❌', 'Gagal', 'Data summary tidak ditemukan'); return; }
+
             const closingDate = outTxs.length > 0
                 ? formatDate(outTxs.reduce((latest: any, tx: any) => tx.transaction_date > latest ? tx.transaction_date : latest, outTxs[0].transaction_date))
                 : new Date().toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
             const requestDateFormatted = formatDate(fr.request_date);
             const qrData = encodeURIComponent(`Dibuat oleh: ${fr.full_name}\nDepartemen: ${fr.department}\nFR #${fr.id}\nPeriode: ${requestDateFormatted} - ${closingDate}`);
             const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${qrData}`;
+            const remainingColor = summary.remaining_balance >= 0 ? '#059669' : '#DC2626';
             const closingHTML = `
 <!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
 <style>
@@ -474,7 +503,7 @@ export default function FundRequestScreen() {
   .summary-box { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
   .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #DBEAFE; font-size: 13px; }
   .summary-row:last-child { border-bottom: none; font-weight: bold; font-size: 15px; }
-  .remaining { color: ${summary.remaining_balance >= 0 ? '#059669' : '#DC2626'}; }
+  .remaining { color: ${remainingColor}; }
   table { width: 100%; border-collapse: collapse; margin-top: 8px; }
   th { background: #F3F4F6; text-align: left; padding: 8px 10px; font-size: 12px; }
   td { padding: 8px 10px; border-bottom: 1px solid #E5E7EB; }
@@ -523,8 +552,8 @@ ${outTxs.length > 0 ? `
             if (await Sharing.isAvailableAsync()) {
                 await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Closing Summary FR (Copy)' });
             }
-        } catch (e) {
-            showToast('❌', 'Gagal', 'Tidak bisa mencetak summary');
+        } catch (e: any) {
+            showToast('❌', 'Gagal', e?.message || 'Tidak bisa mencetak summary');
         }
     };
 
