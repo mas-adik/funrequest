@@ -78,6 +78,7 @@ function statusBadge(status: string) {
         PENDING:  { bg: '#FEF3C7', color: '#92400E', label: 'Menunggu' },
         APPROVED: { bg: '#D1FAE5', color: '#065F46', label: 'Disetujui' },
         REJECTED: { bg: '#FEE2E2', color: '#991B1B', label: 'Ditolak' },
+        CLOSED:   { bg: '#E5E7EB', color: '#374151', label: 'Closed' },
     };
     const s = map[status] || map.PENDING;
     return (
@@ -324,6 +325,10 @@ export default function FundRequestScreen() {
     // Delete confirmation
     const [deleteFR, setDeleteFR] = useState<FundRequest | null>(null);
     const [deleting, setDeleting] = useState(false);
+
+    // Closing state
+    const [showClosing, setShowClosing] = useState(false);
+    const [closing, setClosing] = useState(false);
 
     // Edit state
     const [showEdit, setShowEdit] = useState(false);
@@ -913,6 +918,20 @@ export default function FundRequestScreen() {
                             </TouchableOpacity>
                         )}
 
+                        {/* Closing — only APPROVED */}
+                        {menuFR?.status === 'APPROVED' && (
+                            <TouchableOpacity
+                                onPress={() => { setShowClosing(true); }}
+                                style={{
+                                    flexDirection: 'row', alignItems: 'center', paddingVertical: 14,
+                                    borderBottomWidth: 1, borderBottomColor: '#F3F4F6',
+                                }}
+                            >
+                                <Text style={{ fontSize: 18, marginRight: 14 }}>📊</Text>
+                                <Text style={{ fontSize: 15, color: '#1D4ED8', fontWeight: '600' }}>Closing</Text>
+                            </TouchableOpacity>
+                        )}
+
                         {/* Delete — PENDING or APPROVED */}
                         {(menuFR?.status === 'PENDING' || menuFR?.status === 'APPROVED') && (
                             <TouchableOpacity
@@ -1132,6 +1151,119 @@ export default function FundRequestScreen() {
                             <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>{deletingTx ? 'Menghapus...' : 'Ya, Hapus'}</Text>
                         </TouchableOpacity>
                         <TouchableOpacity onPress={() => setDeleteTx(null)} style={{ paddingVertical: 12, alignItems: 'center' }}>
+                            <Text style={{ color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>Batal</Text>
+                        </TouchableOpacity>
+                    </View>
+                </TouchableOpacity>
+            </Modal>
+
+            {/* ══ Closing Confirmation Modal ══ */}
+            <Modal visible={showClosing} transparent animationType="fade" onRequestClose={() => setShowClosing(false)}>
+                <TouchableOpacity
+                    activeOpacity={1}
+                    onPress={() => setShowClosing(false)}
+                    style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.4)', justifyContent: 'center', alignItems: 'center', padding: 24 }}
+                >
+                    <View style={{ backgroundColor: '#fff', borderRadius: 20, padding: 24, width: '100%', maxWidth: 340 }}>
+                        <Text style={{ fontSize: 40, textAlign: 'center', marginBottom: 12 }}>📊</Text>
+                        <Text style={{ fontSize: 17, fontWeight: '700', color: '#111827', textAlign: 'center', marginBottom: 6 }}>
+                            Closing Fund Request?
+                        </Text>
+                        <Text style={{ fontSize: 13, color: '#6B7280', textAlign: 'center', marginBottom: 20, lineHeight: 20 }}>
+                            Menutup siklus FR #{menuFR?.id}{"\n"}Summary transaksi akan dicetak sebagai PDF dan sisa budget akan di-reset.
+                        </Text>
+
+                        <TouchableOpacity
+                            disabled={closing}
+                            onPress={async () => {
+                                if (!menuFR) return;
+                                setClosing(true);
+                                try {
+                                    const res = await fundRequestApi.close(menuFR.id);
+                                    if (res.success && res.data) {
+                                        const { fund_request, summary, transactions: txList } = res.data;
+                                        // Generate closing summary PDF
+                                        const outTxs = (txList || []).filter((tx: any) => tx.type === 'OUT');
+                                        const closingHTML = `
+<!DOCTYPE html><html lang="id"><head><meta charset="UTF-8"/>
+<style>
+  body { font-family: Arial, sans-serif; margin: 40px; color: #111; font-size: 13px; }
+  h1 { text-align: center; font-size: 20px; text-transform: uppercase; letter-spacing: 1px; }
+  .period { text-align: center; color: #555; margin-bottom: 24px; }
+  .summary-box { background: #EFF6FF; border: 1px solid #BFDBFE; border-radius: 12px; padding: 16px; margin-bottom: 24px; }
+  .summary-row { display: flex; justify-content: space-between; padding: 6px 0; border-bottom: 1px solid #DBEAFE; font-size: 13px; }
+  .summary-row:last-child { border-bottom: none; font-weight: bold; font-size: 15px; }
+  .remaining { color: ${summary.remaining_balance >= 0 ? '#059669' : '#DC2626'}; }
+  table { width: 100%; border-collapse: collapse; margin-top: 8px; }
+  th { background: #F3F4F6; text-align: left; padding: 8px 10px; font-size: 12px; }
+  td { padding: 8px 10px; border-bottom: 1px solid #E5E7EB; }
+  h3 { margin-top: 24px; margin-bottom: 8px; color: #374151; font-size: 14px; }
+  .footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid #ddd; font-size: 11px; color: #888; text-align: center; }
+  .sign-area { display: flex; justify-content: space-between; margin-top: 48px; }
+  .sign-box { text-align: center; width: 200px; }
+  .sign-line { border-top: 1px solid #333; margin-top: 60px; padding-top: 6px; font-size: 12px; }
+</style></head><body>
+<h1>📊 Closing Summary - Fund Request</h1>
+<div class="period">
+  FR #${menuFR.id} — ${menuFR.description}<br/>
+  Tanggal Cetak: ${new Date().toLocaleDateString('id-ID')}
+</div>
+<div class="summary-box">
+  <div class="summary-row"><span>Dana Fund Request</span><span>${formatRupiah(summary.total_budget)}</span></div>
+  <div class="summary-row"><span>− Total Pengeluaran</span><span style="color:#DC2626">${formatRupiah(summary.total_expense)}</span></div>
+  <div class="summary-row"><span>= Sisa yang Dikembalikan</span><span class="remaining">${formatRupiah(summary.remaining_balance)}</span></div>
+</div>
+${outTxs.length > 0 ? `
+  <h3>💸 Rincian Pengeluaran</h3>
+  <table>
+    <thead><tr><th>Tanggal</th><th>Keterangan</th><th style="text-align:right">Nominal</th></tr></thead>
+    <tbody>${outTxs.map((tx: any) => `
+      <tr>
+        <td>${formatDate(tx.transaction_date)}</td>
+        <td>${tx.description || tx.category}</td>
+        <td style="text-align:right;color:#DC2626">− ${formatRupiah(tx.amount)}</td>
+      </tr>`).join('')}
+    </tbody>
+  </table>` : ''}
+<div class="sign-area">
+  <div class="sign-box"><div class="sign-line">Dibuat oleh<br/><strong>${menuFR.full_name}</strong></div></div>
+  <div class="sign-box"><div class="sign-line">Diperiksa oleh<br/><strong>Atasan Langsung</strong></div></div>
+  <div class="sign-box"><div class="sign-line">Disetujui oleh<br/><strong>Admin / Finance</strong></div></div>
+</div>
+<div class="footer">Laporan ini dibuat otomatis melalui Aplikasi FundRequest &copy; ${new Date().getFullYear()}</div>
+</body></html>`;
+                                        try {
+                                            const { uri } = await Print.printToFileAsync({ html: closingHTML, base64: false });
+                                            if (await Sharing.isAvailableAsync()) {
+                                                await Sharing.shareAsync(uri, { mimeType: 'application/pdf', dialogTitle: 'Closing Summary FR' });
+                                            }
+                                        } catch {}
+
+                                        setShowClosing(false);
+                                        setMenuFR(null);
+                                        loadAll();
+                                        showToast('✅', 'Berhasil', 'Fund Request di-closing & summary dicetak');
+                                    } else {
+                                        showToast('❌', 'Gagal', res.error || 'Terjadi kesalahan');
+                                    }
+                                } catch (e: any) {
+                                    showToast('❌', 'Gagal', e.response?.data?.error || 'Coba lagi');
+                                } finally { setClosing(false); }
+                            }}
+                            style={{
+                                backgroundColor: '#1D4ED8', borderRadius: 12, paddingVertical: 14,
+                                alignItems: 'center', marginBottom: 10, opacity: closing ? 0.6 : 1,
+                            }}
+                        >
+                            <Text style={{ color: '#fff', fontSize: 15, fontWeight: '700' }}>
+                                {closing ? 'Memproses...' : 'Ya, Closing & Cetak PDF'}
+                            </Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                            onPress={() => setShowClosing(false)}
+                            style={{ paddingVertical: 12, alignItems: 'center' }}
+                        >
                             <Text style={{ color: '#9CA3AF', fontSize: 14, fontWeight: '600' }}>Batal</Text>
                         </TouchableOpacity>
                     </View>

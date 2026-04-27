@@ -132,6 +132,10 @@ export const fundRequestApi = {
         const res = await api.delete<ApiResponse<null>>(`/fund-requests/${id}`);
         return res.data;
     },
+    close: async (id: number) => {
+        const res = await api.post<ApiResponse<any>>(`/fund-requests/${id}/close`);
+        return res.data;
+    },
 };
 
 // ─── Transactions API ─────────────────────────────────────────────────────────

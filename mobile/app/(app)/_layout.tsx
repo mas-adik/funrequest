@@ -64,9 +64,7 @@ export default function AppLayout() {
                 name="report"
                 options={{
                     title: 'Laporan',
-                    tabBarIcon: ({ focused }) => (
-                        <TabIcon icon="📊" label="Report" focused={focused} />
-                    ),
+                    href: null,
                 }}
             />
             <Tabs.Screen

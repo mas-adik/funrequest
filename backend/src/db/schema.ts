@@ -60,7 +60,7 @@ export const fundRequests = sqliteTable('fund_requests', {
     week_end: integer('week_end', { mode: 'timestamp' }),
     description: text('description').notNull(),
     amount: real('amount').notNull(),        // Nominal pengajuan (IDR)
-    status: text('status', { enum: ['PENDING', 'APPROVED', 'REJECTED'] })
+    status: text('status', { enum: ['PENDING', 'APPROVED', 'REJECTED', 'CLOSED'] })
         .notNull()
         .default('PENDING'),
     created_at: integer('created_at', { mode: 'timestamp' })

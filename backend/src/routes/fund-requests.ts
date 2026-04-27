@@ -156,6 +156,59 @@ fundRequestsRouter.post('/:id/approve', async (c) => {
     }
 });
 
+// POST /fund-requests/:id/close — Close (Tutup) fund request & return summary
+fundRequestsRouter.post('/:id/close', async (c) => {
+    try {
+        const userId   = c.get('userId');
+        const tenantId = c.get('tenantId');
+        const id = parseInt(c.req.param('id'));
+
+        const fr = await db.select().from(fundRequests)
+            .where(and(eq(fundRequests.id, id), eq(fundRequests.user_id, userId), eq(fundRequests.tenant_id, tenantId)))
+            .get();
+        if (!fr) return c.json({ success: false, error: 'Fund request tidak ditemukan' }, 404);
+        if (fr.status !== 'APPROVED') return c.json({ success: false, error: 'Hanya FR yang disetujui bisa di-closing' }, 400);
+
+        // Get all transactions for this FR (linked + unlinked OUT)
+        const allTx = await db.select().from(transactions)
+            .where(and(eq(transactions.user_id, userId), eq(transactions.tenant_id, tenantId)))
+            .all();
+        const relatedTx = allTx.filter(tx => tx.fund_request_id === id || (tx.type === 'OUT' && !tx.fund_request_id));
+        const totalExpense = relatedTx.filter(tx => tx.type === 'OUT').reduce((s, tx) => s + tx.amount, 0);
+
+        // Update status to CLOSED
+        const [updated] = await db.update(fundRequests)
+            .set({ status: 'CLOSED' })
+            .where(eq(fundRequests.id, id))
+            .returning();
+
+        // Link unlinked OUT transactions to this FR before closing
+        for (const tx of relatedTx) {
+            if (!tx.fund_request_id && tx.type === 'OUT') {
+                await db.update(transactions)
+                    .set({ fund_request_id: id })
+                    .where(eq(transactions.id, tx.id));
+            }
+        }
+
+        return c.json({
+            success: true,
+            data: {
+                fund_request: updated,
+                summary: {
+                    total_budget: fr.amount,
+                    total_expense: totalExpense,
+                    remaining_balance: fr.amount - totalExpense,
+                },
+                transactions: relatedTx,
+            },
+        });
+    } catch (error) {
+        console.error('Close fund request error:', error);
+        return c.json({ success: false, error: 'Gagal closing fund request' }, 500);
+    }
+});
+
 // DELETE /fund-requests/:id
 fundRequestsRouter.delete('/:id', async (c) => {
     try {
