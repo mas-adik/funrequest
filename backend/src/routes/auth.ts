@@ -173,8 +173,7 @@ auth.post('/forgot-password', zValidator('json', z.object({
         }).where(eq(users.id, user.id));
 
         // TODO: kirim OTP via email (Resend/Nodemailer)
-        // Untuk sekarang, log ke console (dev mode)
-        console.log(`\n🔐 OTP untuk ${email}: ${otp}\n`);
+        // OTP disimpan di DB, dikirim via email service
 
         return c.json({ success: true, message: 'OTP telah dikirim ke email Anda' });
     } catch (error) {

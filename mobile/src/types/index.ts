@@ -53,7 +53,7 @@ export interface AuthResponse {
 }
 
 // ─── Fund Request Types ───────────────────────────────────────────────────────
-export type FundRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
+export type FundRequestStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CLOSED';
 
 export interface FundRequest {
     id: number;

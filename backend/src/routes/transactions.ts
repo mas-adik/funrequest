@@ -79,13 +79,14 @@ transactionsRouter.get('/', async (c) => {
 transactionsRouter.delete('/:id', async (c) => {
     try {
         const userId = c.get('userId');
+        const tenantId = c.get('tenantId');
         const id = parseInt(c.req.param('id'));
 
         const tx = await db.select().from(transactions)
-            .where(and(eq(transactions.id, id), eq(transactions.user_id, userId))).get();
+            .where(and(eq(transactions.id, id), eq(transactions.user_id, userId), eq(transactions.tenant_id, tenantId))).get();
         if (!tx) return c.json({ success: false, error: 'Transaksi tidak ditemukan' }, 404);
 
-        await db.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.user_id, userId)));
+        await db.delete(transactions).where(and(eq(transactions.id, id), eq(transactions.user_id, userId), eq(transactions.tenant_id, tenantId)));
         return c.json({ success: true, message: 'Transaksi berhasil dihapus' });
     } catch (error) {
         console.error('Delete transaction error:', error);
@@ -104,11 +105,12 @@ const updateTxSchema = z.object({
 transactionsRouter.patch('/:id', zValidator('json', updateTxSchema), async (c) => {
     try {
         const userId = c.get('userId');
+        const tenantId = c.get('tenantId');
         const id = parseInt(c.req.param('id'));
         const data = c.req.valid('json');
 
         const tx = await db.select().from(transactions)
-            .where(and(eq(transactions.id, id), eq(transactions.user_id, userId))).get();
+            .where(and(eq(transactions.id, id), eq(transactions.user_id, userId), eq(transactions.tenant_id, tenantId))).get();
         if (!tx) return c.json({ success: false, error: 'Transaksi tidak ditemukan' }, 404);
 
         const updates: any = {};
@@ -117,7 +119,8 @@ transactionsRouter.patch('/:id', zValidator('json', updateTxSchema), async (c) =
         if (data.amount !== undefined) updates.amount = data.amount;
         if (data.transaction_date !== undefined) updates.transaction_date = new Date(data.transaction_date);
 
-        await db.update(transactions).set(updates).where(eq(transactions.id, id));
+        await db.update(transactions).set(updates)
+            .where(and(eq(transactions.id, id), eq(transactions.user_id, userId), eq(transactions.tenant_id, tenantId)));
 
         const updated = await db.select().from(transactions)
             .where(eq(transactions.id, id)).get();
