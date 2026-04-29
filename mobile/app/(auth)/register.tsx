@@ -8,6 +8,33 @@ import { StatusBar } from 'expo-status-bar';
 import { authApi } from '@/lib/api';
 import { useAuth } from '@/hooks/useAuth';
 
+// Defined outside component to prevent re-creation on each render (keyboard dismiss bug)
+const InputField = ({ label, value, onChangeText, placeholder, error, keyboardType, autoCapitalize, secureTextEntry, rightElement }: any) => (
+    <View style={{ marginBottom: 16 }}>
+        <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 }}>{label}</Text>
+        <View style={{
+            flexDirection: 'row', alignItems: 'center',
+            borderWidth: 1.5, borderColor: error ? '#DC2626' : '#E5E7EB',
+            borderRadius: 12, backgroundColor: '#F9FAFB',
+        }}>
+            <TextInput
+                value={value}
+                onChangeText={onChangeText}
+                placeholder={placeholder}
+                placeholderTextColor="#D1D5DB"
+                keyboardType={keyboardType}
+                autoCapitalize={autoCapitalize}
+                secureTextEntry={secureTextEntry}
+                style={{
+                    flex: 1, paddingHorizontal: 16, paddingVertical: 14,
+                    fontSize: 15, color: '#111827',
+                }}
+            />
+            {rightElement}
+        </View>
+        {error && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{error}</Text>}
+    </View>
+);
 
 export default function RegisterScreen() {
     const { login } = useAuth();
@@ -43,33 +70,6 @@ export default function RegisterScreen() {
             setLoading(false);
         }
     };
-
-    const InputField = ({ label, value, onChangeText, placeholder, error, keyboardType, autoCapitalize, secureTextEntry, rightElement }: any) => (
-        <View style={{ marginBottom: 16 }}>
-            <Text style={{ fontSize: 13, fontWeight: '600', color: '#374151', marginBottom: 6 }}>{label}</Text>
-            <View style={{
-                flexDirection: 'row', alignItems: 'center',
-                borderWidth: 1.5, borderColor: error ? '#DC2626' : '#E5E7EB',
-                borderRadius: 12, backgroundColor: '#F9FAFB',
-            }}>
-                <TextInput
-                    value={value}
-                    onChangeText={onChangeText}
-                    placeholder={placeholder}
-                    placeholderTextColor="#D1D5DB"
-                    keyboardType={keyboardType}
-                    autoCapitalize={autoCapitalize}
-                    secureTextEntry={secureTextEntry}
-                    style={{
-                        flex: 1, paddingHorizontal: 16, paddingVertical: 14,
-                        fontSize: 15, color: '#111827',
-                    }}
-                />
-                {rightElement}
-            </View>
-            {error && <Text style={{ color: '#DC2626', fontSize: 11, marginTop: 4 }}>{error}</Text>}
-        </View>
-    );
 
     return (
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : 'height'} style={{ flex: 1 }}>
