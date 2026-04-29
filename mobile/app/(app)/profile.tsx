@@ -211,8 +211,8 @@ export default function ProfileScreen() {
                     </View>
                 </View>
 
-                {/* ── Tim ── */}
-                <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
+                {/* ── Tim (Admin only) ── */}
+                {user?.role === 'ADMIN' && <View style={{ paddingHorizontal: 16, marginTop: 16 }}>
                     <View style={{
                         backgroundColor: '#fff', borderRadius: 16, padding: 16,
                         elevation: 2, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 8,
@@ -260,9 +260,9 @@ export default function ProfileScreen() {
                             <Text style={{ textAlign: 'center', color: '#D1D5DB', fontSize: 12, paddingVertical: 16 }}>Belum ada user terdaftar</Text>
                         )}
                     </View>
-                </View>
+                </View>}
 
-                <Text style={{ textAlign: 'center', color: '#D1D5DB', fontSize: 11, marginTop: 24 }}>FundRequest v1.0.0</Text>
+                <Text style={{ textAlign: 'center', color: '#D1D5DB', fontSize: 11, marginTop: 24 }}>FundRequest v1.0.1</Text>
             </ScrollView>
 
             {/* ══ Edit Profil — centered dialog ══ */}

@@ -1031,8 +1031,8 @@ ${outTxs.length > 0 ? `
                             </TouchableOpacity>
                         )}
 
-                        {/* Delete — PENDING or APPROVED */}
-                        {(menuFR?.status === 'PENDING' || menuFR?.status === 'APPROVED') && (
+                        {/* Delete — PENDING, APPROVED, or CLOSED */}
+                        {(menuFR?.status === 'PENDING' || menuFR?.status === 'APPROVED' || menuFR?.status === 'CLOSED') && (
                             <TouchableOpacity
                                 onPress={() => {
                                     if (!menuFR) return;
